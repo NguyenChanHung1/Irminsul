@@ -1,0 +1,17 @@
+{
+  "name": "irminsul-monorepo",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "services/*"
+  ],
+  "scripts": {
+    "dev:frontend": "npm --prefix apps/client run dev",
+    "dev:backend": "npm --prefix apps/api run start:dev",
+    "dev:crawler": "cd services/crawler && python crawler.py",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:crawler\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}

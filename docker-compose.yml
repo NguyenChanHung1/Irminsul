@@ -1,0 +1,57 @@
+version: '3.9'
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: nahida
+      POSTGRES_PASSWORD: nahida
+      POSTGRES_DB: irminsul_db
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    networks:
+      - irminsul-network
+
+  irminsul-api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgres://nahida:nahida@db:5432/irminsul_db
+    ports:
+      - 3001:3001
+    networks:
+      - irminsul-network
+
+  web-app:
+    build:
+      context: ./apps/client
+      dockerfile: Dockerfile
+    depends_on:
+      - irminsul-api
+    ports:
+      - 3000:3000
+    environment:
+      NEXT_PUBLIC_API_URL: https://irminsul-api:3001
+    networks:
+      - irminsul-network
+
+  crawler-service:
+    build:
+      context: ./services/crawler
+      dockerfile: Dockerfile
+    depends_on:
+      - db
+    environment:
+      CRAWL_URL: https://example.com
+    networks:
+      - irminsul-network
+
+volumes:
+  db-data:
+
+networks:
+  irminsul-network:
+    driver: bridge
