@@ -7,8 +7,8 @@
   ],
   "scripts": {
     "dev:frontend": "npm --prefix apps/client run dev",
-    "dev:backend": "npm --prefix apps/api run start:dev",
-    "dev:crawler": "cd services/crawler && python crawler.py",
+    "dev:backend": "npm --prefix apps/api run dev:migrate",
+    "dev:crawler": "cd services/crawler && python crawler.py", 
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:crawler\""
   },
   "devDependencies": {

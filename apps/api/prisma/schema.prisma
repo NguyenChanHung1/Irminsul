@@ -7,8 +7,305 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Item {
-  id        String   @id @default(uuid())
-  name      String
-  createdAt DateTime @default(now())
+/// Source registry for crawled/static providers such as NS and genshin.dev.
+model DataSource {
+  id          String     @id @default(uuid())
+  key         String     @unique
+  name        String
+  baseUrl     String
+  description String?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  crawlRuns   CrawlRun[]
+
+  @@map("data_sources")
+}
+
+/// One crawler execution. Keep counts and validation issues for audit/debugging.
+model CrawlRun {
+  id               String     @id @default(uuid())
+  sourceId         String
+  job              String
+  language         String     @default("en")
+  sourceUrls       Json
+  entityLimit      Int?
+  counts           Json
+  validationIssues Json       @default("[]")
+  outputPath       String?
+  fetchedAt        DateTime
+  createdAt        DateTime   @default(now())
+  source           DataSource @relation(fields: [sourceId], references: [id], onDelete: Cascade)
+
+  @@index([sourceId])
+  @@index([job])
+  @@index([fetchedAt])
+  @@map("crawl_runs")
+}
+
+model Character {
+  id                 String              @id
+  slug               String
+  name               String
+  rarity             Int?
+  elementId          String?
+  weaponTypeId       String?
+  nationId           String?
+  affiliation        String?
+  title              String?
+  description        String?
+  releaseDate        DateTime?
+  birthday           String?
+  constellation      String?
+  iconName           String?
+  iconUrl            String?
+  baseHp             Float?
+  baseAtk            Float?
+  baseDef            Float?
+  critRate           Float?
+  critDmg            Float?
+  statsModifier      Json                @default("{}")
+  ascensionMaterials Json                @default("{}")
+  talentMaterials    Json                @default("{}")
+  talents            Json                @default("[]")
+  passiveTalents     Json                @default("[]")
+  constellations     Json                @default("[]")
+  voiceCast          Json                @default("{}")
+  stories            Json                @default("[]")
+  quotes             Json                @default("[]")
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  element            Element?            @relation(fields: [elementId], references: [id], onDelete: SetNull)
+  nation             Nation?             @relation(fields: [nationId], references: [id], onDelete: SetNull)
+  weaponType         WeaponType?         @relation(fields: [weaponTypeId], references: [id], onDelete: SetNull)
+  materialUsages     CharacterMaterial[]
+
+  @@index([name])
+  @@index([slug])
+  @@index([elementId])
+  @@index([weaponTypeId])
+  @@index([nationId])
+  @@map("characters")
+}
+
+model Weapon {
+  id                     String           @id
+  slug                   String
+  name                   String
+  rarity                 Int?
+  weaponTypeId           String?
+  baseAttack             Int?
+  subStat                String?
+  passiveName            String?
+  passiveDescription     String?
+  description            String?
+  location               String?
+  ascensionMaterialGroup String?
+  ascensionMaterials     Json             @default("{}")
+  statsModifier          Json             @default("{}")
+  story                  Json             @default("[]")
+  iconName               String?
+  iconUrl                String?
+  createdAt              DateTime         @default(now())
+  updatedAt              DateTime         @updatedAt
+  weaponType             WeaponType?      @relation(fields: [weaponTypeId], references: [id], onDelete: SetNull)
+  materialUsages         WeaponMaterial[]
+
+  @@index([name])
+  @@index([slug])
+  @@index([weaponTypeId])
+  @@index([rarity])
+  @@index([ascensionMaterialGroup])
+  @@map("weapons")
+}
+
+model ArtifactSet {
+  id             String   @id
+  slug           String
+  name           String
+  ranks          Json     @default("[]")
+  maxRarity      Int?
+  twoPieceBonus  String?
+  fourPieceBonus String?
+  setBonuses     Json     @default("{}")
+  parts          Json     @default("{}")
+  iconName       String?
+  iconUrl        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([name])
+  @@index([slug])
+  @@index([maxRarity])
+  @@map("artifact_sets")
+}
+
+model Material {
+  id               String              @id
+  slug             String
+  name             String
+  groupId          String?
+  family           String?
+  rarity           Int?
+  description      String?
+  source           Json?
+  availability     Json?
+  iconName         String?
+  iconUrl          String?
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  group            MaterialGroup?      @relation(fields: [groupId], references: [id], onDelete: SetNull)
+  characterUsages  CharacterMaterial[]
+  weaponUsages     WeaponMaterial[]
+  enemyDrops       EnemyDrop[]
+  dungeonRewardFor DungeonReward[]
+
+  @@index([name])
+  @@index([slug])
+  @@index([groupId])
+  @@index([family])
+  @@index([rarity])
+  @@map("materials")
+}
+
+model MaterialGroup {
+  id          String     @id
+  name        String
+  description String?
+  materials   Material[]
+
+  @@map("material_groups")
+}
+
+model Enemy {
+  id          String      @id
+  slug        String
+  name        String
+  region      String?
+  enemyType   String?
+  family      String?
+  description String?
+  artifacts   Json        @default("[]")
+  iconName    String?
+  iconUrl     String?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  drops       EnemyDrop[]
+
+  @@index([name])
+  @@index([slug])
+  @@index([region])
+  @@index([enemyType])
+  @@index([family])
+  @@map("enemies")
+}
+
+model Dungeon {
+  id                  String          @id
+  slug                String?
+  name                String
+  domainType          String?
+  nationId            String?
+  location            String?
+  requirements        Json            @default("[]")
+  recommendedElements Json            @default("[]")
+  rewards             Json            @default("[]")
+  enemyWaves          Json            @default("[]")
+  iconName            String?
+  iconUrl             String?
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  nation              Nation?         @relation(fields: [nationId], references: [id], onDelete: SetNull)
+  rewardItems         DungeonReward[]
+
+  @@index([name])
+  @@index([slug])
+  @@index([domainType])
+  @@index([nationId])
+  @@map("dungeons")
+}
+
+model CharacterMaterial {
+  id          String    @id @default(uuid())
+  characterId String
+  materialId  String
+  source      String?
+  quantity    Int?
+  level       String?
+  character   Character @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  material    Material  @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([characterId, materialId, source, level])
+  @@index([materialId])
+  @@map("character_materials")
+}
+
+model WeaponMaterial {
+  id         String   @id @default(uuid())
+  weaponId   String
+  materialId String
+  source     String?
+  quantity   Int?
+  level      String?
+  weapon     Weapon   @relation(fields: [weaponId], references: [id], onDelete: Cascade)
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([weaponId, materialId, source, level])
+  @@index([materialId])
+  @@map("weapon_materials")
+}
+
+model EnemyDrop {
+  enemyId      String
+  materialId   String
+  rarity       Int?
+  minimumLevel Int?
+  enemy        Enemy    @relation(fields: [enemyId], references: [id], onDelete: Cascade)
+  material     Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@id([enemyId, materialId])
+  @@index([materialId])
+  @@map("enemy_drops")
+}
+
+model DungeonReward {
+  id         String   @id @default(uuid())
+  dungeonId  String
+  materialId String
+  day        String?
+  level      Int?
+  dropMin    Int?
+  dropMax    Int?
+  average    Float?
+  dungeon    Dungeon  @relation(fields: [dungeonId], references: [id], onDelete: Cascade)
+  material   Material @relation(fields: [materialId], references: [id], onDelete: Cascade)
+
+  @@unique([dungeonId, materialId, day, level])
+  @@index([materialId])
+  @@map("dungeon_rewards")
+}
+
+model Element {
+  id         String      @id
+  name       String      @unique
+  characters Character[]
+
+  @@map("elements")
+}
+
+model WeaponType {
+  id         String      @id
+  name       String      @unique
+  characters Character[]
+  weapons    Weapon[]
+
+  @@map("weapon_types")
+}
+
+model Nation {
+  id         String      @id
+  name       String      @unique
+  characters Character[]
+  dungeons   Dungeon[]
+
+  @@map("nations")
 }
