@@ -1,18 +1,49 @@
 // Character detail page
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import Image from "next/image";
-import { Character } from "../../types";
+import { CharacterDetails, api } from "../../lib/api";
 
 export default function CharacterDetailPage() {
   const router = useRouter();
   const { id } = router.query;
-  const character = null as Character | null; // Will be fetched from API based on `id`
+  const [character, setCharacter] = useState<CharacterDetails | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!router.isReady || typeof id !== "string") {
+      return;
+    }
+
+    let isCurrent = true;
+    setError(null);
+
+    api
+      .character(id)
+      .then((response) => {
+        if (isCurrent) {
+          setCharacter(response);
+        }
+      })
+      .catch((err: Error) => {
+        if (isCurrent) {
+          setError(err.message);
+          setCharacter(null);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [id, router.isReady]);
 
   if (router.isFallback || !character) {
     return (
       <div className="page-container">
-        <div className="loading">Loading character details...</div>
+        <div className={error ? "empty-state" : "loading"}>
+          {error || "Loading character details..."}
+        </div>
       </div>
     );
   }
@@ -61,19 +92,23 @@ export default function CharacterDetailPage() {
             <div className="stats-grid">
               <div className="stat">
                 <label>HP</label>
-                <span className="value">— (Will load from API)</span>
+                <span className="value">{character.base_hp ?? "-"}</span>
               </div>
               <div className="stat">
                 <label>ATK</label>
-                <span className="value">—</span>
+                <span className="value">{character.base_atk ?? "-"}</span>
               </div>
               <div className="stat">
                 <label>DEF</label>
-                <span className="value">—</span>
+                <span className="value">{character.base_def ?? "-"}</span>
               </div>
               <div className="stat">
                 <label>Crit Rate</label>
-                <span className="value">—</span>
+                <span className="value">
+                  {character.crit_rate !== undefined && character.crit_rate !== null
+                    ? `${character.crit_rate}%`
+                    : "-"}
+                </span>
               </div>
             </div>
           </section>
@@ -81,28 +116,29 @@ export default function CharacterDetailPage() {
           <section className="detail-section">
             <h2>Talents</h2>
             <div className="talents">
-              <div className="talent">
-                <h3>Normal Attack</h3>
-                <p>Description will be loaded from API</p>
-              </div>
-              <div className="talent">
-                <h3>Elemental Skill</h3>
-                <p>Description will be loaded from API</p>
-              </div>
-              <div className="talent">
-                <h3>Elemental Burst</h3>
-                <p>Description will be loaded from API</p>
-              </div>
+              {character.talents?.length ? (
+                character.talents.map((talent, index) => (
+                  <div className="talent" key={`${talent.name}-${index}`}>
+                    <h3>{talent.name || `Talent ${index + 1}`}</h3>
+                    <p>{talent.description || talent.unlock || "No description available."}</p>
+                  </div>
+                ))
+              ) : (
+                <div className="talent">
+                  <h3>No talents found</h3>
+                  <p>This import did not include talent data for this character.</p>
+                </div>
+              )}
             </div>
           </section>
 
           <section className="detail-section">
-            <h2>Recommended Builds</h2>
+            <h2>Profile</h2>
             <div className="builds">
               <div className="build">
-                <h3>Main Build</h3>
-                <p>Weapon: —</p>
-                <p>Artifacts: —</p>
+                <h3>{character.title || character.constellation || character.name}</h3>
+                <p>{character.description || "No description available."}</p>
+                {character.birthday && <p>Birthday: {character.birthday}</p>}
               </div>
             </div>
           </section>

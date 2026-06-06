@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -97,3 +98,74 @@ def write_json_atomically(path: Path, payload: dict[str, Any]) -> None:
         temp_path = Path(temp_file.name)
 
     temp_path.replace(path)
+
+
+class ProgressReporter:
+    """Small terminal progress reporter for manual crawler runs."""
+
+    def __init__(self, enabled: bool | None = None) -> None:
+        if enabled is None:
+            enabled = os.getenv("CRAWLER_PROGRESS", "true").lower() not in {"0", "false", "no"}
+        self.enabled = enabled
+        self.is_tty = sys.stdout.isatty()
+        self._last_inline = False
+
+    def step(self, message: str) -> None:
+        if not self.enabled:
+            return
+        self._clear_inline()
+        print(f"[crawl] {message}", flush=True)
+
+    def task(self, label: str, total: int | None = None) -> "ProgressTask":
+        return ProgressTask(self, label, total)
+
+    def render(self, label: str, current: int, total: int | None = None, detail: str | None = None) -> None:
+        if not self.enabled:
+            return
+        if not self.is_tty and total and current not in {0, total} and current % 25 != 0:
+            return
+
+        if total:
+            width = 24
+            filled = min(width, int(width * current / total))
+            bar = "#" * filled + "-" * (width - filled)
+            status = f"[{bar}] {current}/{total}"
+        else:
+            status = f"{current}"
+
+        suffix = f" - {detail}" if detail else ""
+        line = f"[crawl] {label} {status}{suffix}"
+
+        if self.is_tty:
+            print("\r" + line[:160].ljust(160), end="", flush=True)
+            self._last_inline = True
+        else:
+            print(line, flush=True)
+
+    def done(self, label: str, total: int | None = None) -> None:
+        if not self.enabled:
+            return
+        self._clear_inline()
+        suffix = f" ({total})" if total is not None else ""
+        print(f"[crawl] {label} done{suffix}", flush=True)
+
+    def _clear_inline(self) -> None:
+        if self._last_inline:
+            print()
+            self._last_inline = False
+
+
+class ProgressTask:
+    def __init__(self, reporter: ProgressReporter, label: str, total: int | None = None) -> None:
+        self.reporter = reporter
+        self.label = label
+        self.total = total
+        self.current = 0
+        self.reporter.render(self.label, self.current, self.total)
+
+    def advance(self, detail: str | None = None) -> None:
+        self.current += 1
+        self.reporter.render(self.label, self.current, self.total, detail)
+
+    def done(self) -> None:
+        self.reporter.done(self.label, self.total)

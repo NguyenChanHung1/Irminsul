@@ -407,6 +407,8 @@ code {
 .showcase-grid,
 .all-characters-grid {
   grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  align-items: stretch;
+  margin-top: var(--space-xl);
 }
 
 .stats-grid {
@@ -510,6 +512,10 @@ textarea:focus,
   gap: var(--space-md);
 }
 
+.filter-bar {
+  margin-bottom: var(--space-xl);
+}
+
 .filter-group label,
 .form-group label {
   display: block;
@@ -541,6 +547,19 @@ textarea:focus,
   transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
+.character-card,
+.item-card {
+  display: flex;
+  height: 100%;
+  min-height: 360px;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.item-card {
+  min-height: 300px;
+}
+
 .character-card:hover,
 .item-card:hover,
 .stat-card:hover {
@@ -550,6 +569,7 @@ textarea:focus,
 
 .character-image,
 .item-image {
+  flex: 0 0 auto;
   overflow: hidden;
   border-radius: var(--radius);
   background: linear-gradient(145deg, rgba(158, 219, 123, 0.2), rgba(103, 212, 195, 0.1));
@@ -558,10 +578,12 @@ textarea:focus,
 
 .character-image {
   aspect-ratio: 1 / 1.18;
+  height: 220px;
 }
 
 .item-image {
   aspect-ratio: 1;
+  height: 128px;
 }
 
 .character-image img,
@@ -575,6 +597,14 @@ textarea:focus,
 .item-info h4 {
   margin: 0 0 0.45rem;
   color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.character-info,
+.item-info {
+  min-width: 0;
 }
 
 .character-meta {
@@ -632,6 +662,52 @@ textarea:focus,
   margin: 0;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.weapon-type,
+.region,
+.item-type,
+.main-stat {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-description {
+  display: -webkit-box;
+  overflow: hidden;
+  margin: 0.55rem 0 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-xl);
+}
+
+.load-more-button {
+  min-width: 220px;
+  border: 1px solid rgba(103, 212, 195, 0.32);
+  border-radius: var(--radius);
+  background: rgba(103, 212, 195, 0.1);
+  color: var(--text);
+  font-weight: 800;
+  padding: 0.85rem 1.2rem;
+}
+
+.load-more-button:hover:not(:disabled) {
+  border-color: var(--accent-2);
+  background: rgba(103, 212, 195, 0.18);
+}
+
+.load-more-button:disabled {
+  cursor: progress;
+  opacity: 0.65;
 }
 
 .stat-card {

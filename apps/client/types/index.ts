@@ -1,6 +1,7 @@
 // Shared data models
 export interface Character {
   id: string;
+  slug?: string;
   name: string;
   rarity: number;
   element: string;
@@ -11,6 +12,7 @@ export interface Character {
 
 export interface Weapon {
   id: string;
+  slug?: string;
   name: string;
   rarity: number;
   weapon_type: string;
@@ -20,6 +22,7 @@ export interface Weapon {
 
 export interface Artifact {
   id: string;
+  slug?: string;
   name: string;
   rarity: number;
   set_name: string;
@@ -29,9 +32,21 @@ export interface Artifact {
 
 export interface Item {
   id: string;
+  slug?: string;
   name: string;
   rarity?: number;
   type: string;
+  image_url?: string;
+}
+
+export interface Enemy {
+  id: string;
+  slug?: string;
+  name: string;
+  region?: string;
+  enemy_type?: string;
+  family?: string;
+  description?: string;
   image_url?: string;
 }
 
@@ -107,5 +122,6 @@ export interface FilterOptions {
   character?: string;
   element?: string;
   weaponType?: string;
+  type?: string;
   rarity?: number;
 }

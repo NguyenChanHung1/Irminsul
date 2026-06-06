@@ -7,9 +7,18 @@
   ],
   "scripts": {
     "dev:frontend": "npm --prefix apps/client run dev",
-    "dev:backend": "npm --prefix apps/api run dev:migrate",
-    "dev:crawler": "cd services/crawler && python crawler.py", 
-    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\" \"npm run dev:crawler\""
+    "dev:backend": "npm --prefix apps/api run prisma:generate && npm --prefix apps/api run prisma:migrate:deploy && npm --prefix apps/api run start:dev",
+    "dev:crawler": "cd services/crawler && python crawler.py",
+    "crawl:job": "cd services/crawler && python crawler.py",
+    "crawl:import": "npm --prefix apps/api run prisma:generate && node apps/api/scripts/import-crawl-dataset.js",
+    "crawl:dataset": "npm --prefix apps/api run prisma:generate && node apps/api/scripts/run-crawl-dataset.js",
+    "crawl:scheduled": "npm --prefix apps/api run prisma:generate && node apps/api/scripts/run-scheduled-crawl.js",
+    "db:generate": "npm --prefix apps/api run prisma:generate",
+    "db:migrate": "npm --prefix apps/api run prisma:migrate:deploy",
+    "db:migrate:dev": "npm --prefix apps/api run prisma:migrate:dev --",
+    "db:push": "npm --prefix apps/api run prisma:push",
+    "db:validate": "npm --prefix apps/api run prisma:validate",
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
   },
   "devDependencies": {
     "concurrently": "^8.2.0"

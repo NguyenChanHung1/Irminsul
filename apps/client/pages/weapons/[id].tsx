@@ -1,17 +1,48 @@
 // Weapon detail page
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import Head from "next/head";
-import { Weapon } from "../../types";
+import { WeaponDetails, api } from "../../lib/api";
 
 export default function WeaponDetailPage() {
   const router = useRouter();
   const { id } = router.query;
-  const weapon = null as Weapon | null; // Will be fetched from API
+  const [weapon, setWeapon] = useState<WeaponDetails | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!router.isReady || typeof id !== "string") {
+      return;
+    }
+
+    let isCurrent = true;
+    setError(null);
+
+    api
+      .weapon(id)
+      .then((response) => {
+        if (isCurrent) {
+          setWeapon(response);
+        }
+      })
+      .catch((err: Error) => {
+        if (isCurrent) {
+          setError(err.message);
+          setWeapon(null);
+        }
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [id, router.isReady]);
 
   if (router.isFallback || !weapon) {
     return (
       <div className="page-container">
-        <div className="loading">Loading weapon details...</div>
+        <div className={error ? "empty-state" : "loading"}>
+          {error || "Loading weapon details..."}
+        </div>
       </div>
     );
   }
@@ -40,7 +71,7 @@ export default function WeaponDetailPage() {
             <div className="stats-list">
               <div className="stat-row">
                 <span>ATK:</span>
-                <span className="value">— (from API)</span>
+                <span className="value">{weapon.base_attack ?? "-"}</span>
               </div>
               <div className="stat-row">
                 <span>Sub Stat:</span>
@@ -51,13 +82,14 @@ export default function WeaponDetailPage() {
 
           <section className="detail-section">
             <h2>Passive Effect</h2>
-            <p>Passive details will be loaded from API</p>
+            {weapon.passive_name && <h3>{weapon.passive_name}</h3>}
+            <p>{weapon.passive_description || "No passive details available."}</p>
           </section>
 
           <section className="detail-section">
-            <h2>Recommended For</h2>
+            <h2>Source</h2>
             <div className="recommendations">
-              <p>Characters that benefit from this weapon will be listed here</p>
+              <p>{weapon.location || weapon.description || "No source details available."}</p>
             </div>
           </section>
         </div>

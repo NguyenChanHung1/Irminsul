@@ -1,33 +1,26 @@
-// Weapons listing page
 import { useEffect, useState } from "react";
 import Head from "next/head";
 import SearchInput from "../components/SearchInput";
 import FilterBar from "../components/FilterBar";
-import ItemCard from "../components/ItemCard";
-import { Weapon, FilterOptions } from "../types";
 import { PageMeta, api } from "../lib/api";
+import { Enemy, FilterOptions } from "../types";
 
 const PAGE_LIMIT = 40;
-const weaponFilters = [
+const enemyFilters = [
   {
-    key: "weaponType" as const,
-    label: "Weapon Type",
-    options: ["Sword", "Claymore", "Polearm", "Bow", "Catalyst"].map((value) => ({
+    key: "type" as const,
+    label: "Type",
+    options: ["Monster", "Elite", "Boss", "Weekly Boss"].map((value) => ({
       label: value,
       value,
     })),
   },
-  {
-    key: "rarity" as const,
-    label: "Rarity",
-    options: [5, 4, 3, 2, 1].map((value) => ({ label: `${value} star`, value })),
-  },
 ];
 
-export default function WeaponsPage() {
+export default function EnemiesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState<FilterOptions>({});
-  const [weapons, setWeapons] = useState<Weapon[]>([]);
+  const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [meta, setMeta] = useState<PageMeta | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -40,22 +33,21 @@ export default function WeaponsPage() {
     setError(null);
 
     api
-      .weapons({
+      .enemies({
         q: searchQuery,
-        rarity: filters.rarity,
-        weaponType: filters.weaponType,
+        type: filters.type,
         limit: PAGE_LIMIT,
       })
       .then((response) => {
         if (isCurrent) {
-          setWeapons(response.data);
+          setEnemies(response.data);
           setMeta(response.meta);
         }
       })
       .catch((err: Error) => {
         if (isCurrent) {
           setError(err.message);
-          setWeapons([]);
+          setEnemies([]);
           setMeta(null);
         }
       })
@@ -68,15 +60,7 @@ export default function WeaponsPage() {
     return () => {
       isCurrent = false;
     };
-  }, [searchQuery, filters.rarity, filters.weaponType]);
-
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-  };
-
-  const handleFilterChange = (newFilters: FilterOptions) => {
-    setFilters(newFilters);
-  };
+  }, [searchQuery, filters.type]);
 
   const handleLoadMore = () => {
     if (!meta || meta.page >= meta.totalPages || isLoadingMore) {
@@ -87,15 +71,14 @@ export default function WeaponsPage() {
     setError(null);
 
     api
-      .weapons({
+      .enemies({
         q: searchQuery,
-        rarity: filters.rarity,
-        weaponType: filters.weaponType,
+        type: filters.type,
         page: meta.page + 1,
         limit: PAGE_LIMIT,
       })
       .then((response) => {
-        setWeapons((current) => [...current, ...response.data]);
+        setEnemies((current) => [...current, ...response.data]);
         setMeta(response.meta);
       })
       .catch((err: Error) => setError(err.message))
@@ -105,46 +88,46 @@ export default function WeaponsPage() {
   return (
     <>
       <Head>
-        <title>Weapons | Irminsul</title>
+        <title>Enemies | Irminsul</title>
       </Head>
 
       <div className="page-container">
         <div className="page-header">
-          <h1>⚔️ Weapons</h1>
-          <p>Discover all weapons in Teyvat</p>
+          <h1>Enemies</h1>
+          <p>Browse enemy records, families, regions, and drops.</p>
         </div>
 
-        <SearchInput
-          placeholder="Search by name, type..."
-          onSearch={handleSearch}
-        />
+        <SearchInput placeholder="Search by name, family, region..." onSearch={setSearchQuery} />
 
-        <FilterBar fields={weaponFilters} onFilterChange={handleFilterChange} />
+        <FilterBar fields={enemyFilters} onFilterChange={setFilters} />
 
         <div className="items-grid">
           {isLoading ? (
-            <div className="loading">Loading weapons...</div>
+            <div className="loading">Loading enemies...</div>
           ) : error ? (
             <div className="empty-state">
-              <p>Unable to load weapons</p>
+              <p>Unable to load enemies</p>
               <p>{error}</p>
             </div>
-          ) : weapons.length > 0 ? (
-            weapons.map((weapon) => (
-              <ItemCard
-                key={weapon.id}
-                id={weapon.id}
-                name={weapon.name}
-                rarity={weapon.rarity}
-                type={weapon.weapon_type}
-                mainStat={weapon.main_stat}
-                image_url={weapon.image_url}
-                href={`/weapons/${weapon.id}`}
-              />
+          ) : enemies.length > 0 ? (
+            enemies.map((enemy) => (
+              <article className="item-card enemy-card" key={enemy.id}>
+                {enemy.image_url && (
+                  <div className="item-image">
+                    <img src={enemy.image_url} alt={enemy.name} />
+                  </div>
+                )}
+                <div className="item-info">
+                  <h4>{enemy.name}</h4>
+                  <p className="item-type">{enemy.enemy_type || enemy.family || "Enemy"}</p>
+                  {enemy.region && <p className="main-stat">{enemy.region}</p>}
+                  {enemy.description && <p className="card-description">{enemy.description}</p>}
+                </div>
+              </article>
             ))
           ) : (
             <div className="empty-state">
-              <p>📭 No weapons found</p>
+              <p>No enemies found</p>
             </div>
           )}
         </div>
@@ -152,7 +135,7 @@ export default function WeaponsPage() {
         {meta && meta.page < meta.totalPages && (
           <div className="load-more-row">
             <button className="load-more-button" onClick={handleLoadMore} disabled={isLoadingMore}>
-              {isLoadingMore ? "Loading..." : `Load more (${weapons.length}/${meta.total})`}
+              {isLoadingMore ? "Loading..." : `Load more (${enemies.length}/${meta.total})`}
             </button>
           </div>
         )}

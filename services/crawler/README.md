@@ -40,7 +40,7 @@ HTML sources such as wiki pages can be useful as secondary references, but we av
 - `CRAWLER_LANG`: response language, default `en`.
 - `CRAWLER_ENTITY_TYPES`: comma-separated upstream entity types.
 - `CRAWLER_ENTITY_LIMIT`: optional sample limit per entity type.
-- `CRAWLER_OUTPUT_DIR`: directory for generated JSON.
+- `CRAWLER_OUTPUT_DIR`: dataset root directory. The crawler creates it if missing.
 - `CRAWLER_FAIL_ON_VALIDATION`: set `true` to fail if normalized records have missing IDs/names.
 - `CRAWLER_TIMEOUT_SECONDS`: request timeout.
 - `CRAWLER_RETRY_TOTAL`: retry count.
@@ -62,7 +62,38 @@ For a small sample:
 CRAWLER_ENTITY_LIMIT=2 python crawler.py
 ```
 
+For a root dataset directory:
+
+```bash
+CRAWL_DATASET_PATH=/data/gi-data npm run crawl:dataset
+```
+
 ## CrawlJob Output Shape
+
+The crawler writes a directory dataset:
+
+```text
+/data/gi-data/
+├── metadata.json
+├── characters/raw.json
+├── weapons/raw.json
+├── artifacts/raw.json
+├── ascension_materials/raw.json
+├── enemies/raw.json
+├── dungeons/raw.json
+├── gi-crawl-job.json
+└── {timestamp}-game-data-crawl-job.json
+```
+
+Each `{entity}/raw.json` stores:
+
+```json
+{
+  "data": []
+}
+```
+
+The combined `gi-crawl-job.json` keeps the legacy shape:
 
 ```json
 {

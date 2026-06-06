@@ -47,7 +47,7 @@ def parse_datetime(value: str | None) -> str | None:
 def icon_asset_url(static_base_url: str, version: str, icon_name: str | None) -> str | None:
     if not icon_name:
         return None
-    return f"{static_base_url.rstrip('/')}/gi/{version}/assets/{icon_name}.png"
+    return f"{static_base_url.rstrip('/')}/assets/gi/{icon_name}.webp"
 
 
 class NSNormalizer:

@@ -68,6 +68,9 @@ export default function Layout({ children }: LayoutProps) {
               <Link href="/items" className={`nav-item ${isActive("/items") ? "active" : ""}`}>
                 📦 Items
               </Link>
+              <Link href="/enemies" className={`nav-item ${isActive("/enemies") ? "active" : ""}`}>
+                🛡️ Enemies
+              </Link>
             </div>
 
             {/* Analytics */}

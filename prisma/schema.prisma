@@ -28,6 +28,7 @@ model CrawlRun {
   job              String
   language         String     @default("en")
   sourceUrls       Json
+  sourceVersions   Json       @default("{}")
   entityLimit      Int?
   counts           Json
   validationIssues Json       @default("[]")

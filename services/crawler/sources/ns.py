@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 import requests
 
-from core import HttpConfig, create_retrying_session
+from core import HttpConfig, ProgressReporter, create_retrying_session
 
 
 DEFAULT_NS_ENTITY_TYPES = ("characters", "weapons", "artifacts", "materials", "enemies")
@@ -23,20 +23,31 @@ class NSResponse:
 class NSSource:
     """Fetch current Genshin static data from the NS static dataset."""
 
-    def __init__(self, site_url: str, static_base_url: str, lang: str, http_config: HttpConfig) -> None:
+    def __init__(
+        self,
+        site_url: str,
+        static_base_url: str,
+        lang: str,
+        http_config: HttpConfig,
+        progress: ProgressReporter | None = None,
+    ) -> None:
         self.site_url = site_url.rstrip("/") + "/"
         self.static_base_url = static_base_url.rstrip("/") + "/"
         self.lang = lang
         self.http_config = http_config
         self.session = create_retrying_session(http_config)
+        self.progress = progress or ProgressReporter(enabled=False)
 
     def discover_version(self) -> str:
+        self.progress.step("discovering current static source version")
         response = self._get(self.site_url)
         escaped_host = re.escape(self.static_base_url.rstrip("/"))
         match = re.search(rf"{escaped_host}/gi/([^/]+)/character\.json", response.text)
         if not match:
             raise ValueError("Could not discover NS GI version from site HTML.")
-        return match.group(1)
+        version = match.group(1)
+        self.progress.step(f"static source version: {version}")
+        return version
 
     def fetch_all(self, requested_types: list[str], limit: int | None = None) -> tuple[str, list[NSResponse]]:
         version = self.discover_version()
@@ -58,8 +69,12 @@ class NSSource:
 
     def _fetch_simple(self, version: str, entity_type: str, path: str, limit: int | None) -> NSResponse:
         source_url = self._static_url(version, path)
+        self.progress.step(f"fetching NS {entity_type} list")
         payload = self._get(source_url).json()
-        return NSResponse(entity_type, source_url, self._limit_mapping(payload, limit))
+        limited_payload = self._limit_mapping(payload, limit)
+        total = len(limited_payload) if isinstance(limited_payload, dict) else None
+        self.progress.done(f"NS {entity_type} list fetched", total)
+        return NSResponse(entity_type, source_url, limited_payload)
 
     def _fetch_with_details(
         self,
@@ -70,8 +85,11 @@ class NSSource:
         limit: int | None,
     ) -> NSResponse:
         source_url = self._static_url(version, list_path)
+        self.progress.step(f"fetching NS {entity_type} list")
         listing = self._limit_mapping(self._get(source_url).json(), limit)
         details: dict[str, Any] = {}
+        total = len(listing) if isinstance(listing, dict) else None
+        task = self.progress.task(f"fetching NS {entity_type} details", total)
 
         for item_id in listing:
             detail_url = self._static_url(version, f"{self.lang}/{detail_folder}/{item_id}.json")
@@ -79,6 +97,9 @@ class NSSource:
                 details[item_id] = self._get(detail_url).json()
             except requests.HTTPError:
                 details[item_id] = None
+            task.advance(str(item_id))
+
+        task.done()
 
         return NSResponse(
             entity_type=entity_type,
