@@ -54,31 +54,31 @@ services:
   #   networks:
   #     - irminsul-network
 
-  crawler-service:
-    build:
-      context: ./services/crawler
-      dockerfile: Dockerfile
-    depends_on:
-      - db
-    environment:
-      CRAWL_URL: https://example.com
-      CRAWLER_OUTPUT_DIR: /app/data/raw
-      CRAWLER_JOB: crawl_job
-      NS_SITE_URL: ${NS_SITE_URL:-"https://example.com"}
-      NS_STATIC_BASE_URL: ${NS_BASE_URL:-"https://example.com"}
-      NS_ENTITY_TYPES: characters,weapons,artifacts,materials,enemies
-      GENSHIN_DEV_BASE_URL: ${GENSHIN_DEV_BASE_URL:-"https://genshin.jmp.blue"}
-      CRAWLER_LANG: en
-      CRAWLER_ENTITY_TYPES: characters,weapons,artifacts,materials,enemies,domains
-      CRAWLER_ENTITY_LIMIT:
-      CRAWLER_FAIL_ON_VALIDATION: false
-      CRAWLER_TIMEOUT_SECONDS: 15
-      CRAWLER_RETRY_TOTAL: 3
-      CRAWLER_RETRY_BACKOFF_SECONDS: 0.5
-      CRAWLER_LOG_LEVEL: INFO
-      CRAWLER_USER_AGENT: IrminsulCrawler/0.2
-    networks:
-      - irminsul-network
+  # crawler-service:
+  #   build:
+  #     context: ./services/crawler
+  #     dockerfile: Dockerfile
+  #   depends_on:
+  #     - db
+  #   environment:
+  #     CRAWL_URL: https://example.com
+  #     CRAWLER_OUTPUT_DIR: /app/data/raw
+  #     CRAWLER_JOB: crawl_job
+  #     NS_SITE_URL: ${NS_SITE_URL:-"https://example.com"}
+  #     NS_STATIC_BASE_URL: ${NS_BASE_URL:-"https://example.com"}
+  #     NS_ENTITY_TYPES: characters,weapons,artifacts,materials,enemies
+  #     GENSHIN_DEV_BASE_URL: ${GENSHIN_DEV_BASE_URL:-"https://genshin.jmp.blue"}
+  #     CRAWLER_LANG: en
+  #     CRAWLER_ENTITY_TYPES: characters,weapons,artifacts,materials,enemies,domains
+  #     CRAWLER_ENTITY_LIMIT:
+  #     CRAWLER_FAIL_ON_VALIDATION: false
+  #     CRAWLER_TIMEOUT_SECONDS: 15
+  #     CRAWLER_RETRY_TOTAL: 3
+  #     CRAWLER_RETRY_BACKOFF_SECONDS: 0.5
+  #     CRAWLER_LOG_LEVEL: INFO
+  #     CRAWLER_USER_AGENT: IrminsulCrawler/0.2
+  #   networks:
+  #     - irminsul-network
 
 volumes:
   db-data:
