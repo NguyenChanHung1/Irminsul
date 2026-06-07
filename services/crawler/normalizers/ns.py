@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import re
 from typing import Any
 
 from normalizers.genshin_dev import slugify
@@ -9,6 +10,7 @@ from normalizers.genshin_dev import slugify
 WEAPON_TYPES = {
     "WEAPON_SWORD_ONE_HAND": "Sword",
     "WEAPON_CLAYMORE": "Claymore",
+    "WEAPON_POLE": "Polearm",
     "WEAPON_POLEARM": "Polearm",
     "WEAPON_CATALYST": "Catalyst",
     "WEAPON_BOW": "Bow",
@@ -50,6 +52,76 @@ def icon_asset_url(static_base_url: str, version: str, icon_name: str | None) ->
     return f"{static_base_url.rstrip('/')}/assets/gi/{icon_name}.webp"
 
 
+def element_icon_url(element: str | None) -> str | None:
+    return None
+
+
+REFINEMENT_NUMBER_RE = re.compile(
+    r"(?P<number>\d+(?:\.\d+)?)(?P<suffix>%?)"
+)
+
+
+def ranked_refinement_entries(refinement: Any) -> list[dict[str, Any]]:
+    if not isinstance(refinement, dict):
+        return []
+    return [entry for rank in range(1, 6) if isinstance(entry := refinement.get(str(rank)), dict)]
+
+
+def combine_refinement_descriptions(descriptions: list[str]) -> str | None:
+    if not descriptions:
+        return None
+
+    base = descriptions[0]
+    token_lists = [list(REFINEMENT_NUMBER_RE.finditer(description)) for description in descriptions]
+    if any(len(tokens) < len(token_lists[0]) for tokens in token_lists[1:]):
+        return base
+
+    parts: list[str] = []
+    last_index = 0
+
+    for token_index, base_token in enumerate(token_lists[0]):
+        ranked_tokens = [tokens[token_index] for tokens in token_lists]
+        if any(token.group("suffix") != base_token.group("suffix") for token in ranked_tokens):
+            continue
+
+        values = [token.group("number") for token in ranked_tokens]
+        if len(set(values)) <= 1:
+            continue
+
+        parts.append(base[last_index : base_token.start("number")])
+        parts.append("/".join(values))
+        last_index = base_token.end("number")
+
+    if last_index == 0:
+        return base
+
+    parts.append(base[last_index:])
+    return "".join(parts)
+
+
+def refinement_name(refinement: Any) -> str | None:
+    if isinstance(refinement, dict):
+        if refinement.get("name"):
+            return refinement.get("name")
+        entries = ranked_refinement_entries(refinement)
+        if entries:
+            return entries[0].get("name")
+    return None
+
+
+def refinement_description(refinement: Any) -> str | None:
+    if isinstance(refinement, dict):
+        if refinement.get("desc"):
+            return refinement.get("desc")
+        descriptions = [
+            entry.get("desc")
+            for entry in ranked_refinement_entries(refinement)
+            if isinstance(entry.get("desc"), str) and entry.get("desc")
+        ]
+        return combine_refinement_descriptions(descriptions)
+    return None
+
+
 class NSNormalizer:
     """Normalize NS current-version data into the crawler output contract."""
 
@@ -79,6 +151,8 @@ class NSNormalizer:
             info = detail.get("chara_info") or {}
             name = localized_name(detail) or localized_name(item) or item_id
             birth = info.get("birth") or item.get("birth") or []
+            element = detail.get("element") or item.get("element") or info.get("vision")
+            weapon_type = detail.get("weapon") or item.get("weapon") or item.get("weapon_type")
 
             records.append(
                 {
@@ -86,8 +160,11 @@ class NSNormalizer:
                     "slug": slugify(name),
                     "name": name,
                     "rarity": rank_to_int(detail.get("rarity") or item.get("rank")),
-                    "element": detail.get("element") or item.get("element") or info.get("vision"),
-                    "weapon_type": WEAPON_TYPES.get(detail.get("weapon") or item.get("weapon"), detail.get("weapon") or item.get("weapon")),
+                    "element": element,
+                    "element_icon_url": element_icon_url(element),
+                    "weapon_type": WEAPON_TYPES.get(weapon_type, weapon_type),
+                    "weapon_type_icon_url": icon_asset_url(self.static_base_url, self.version, weapon_type),
+                    "weapon_type_url": icon_asset_url(self.static_base_url, self.version, weapon_type),
                     "nation": self.region_name(info.get("region")),
                     "affiliation": info.get("native"),
                     "title": info.get("title"),
@@ -103,8 +180,8 @@ class NSNormalizer:
                     "crit_rate": detail.get("crit_rate"),
                     "crit_dmg": detail.get("crit_dmg"),
                     "stats_modifier": detail.get("stats_modifier") or {},
-                    "ascension_materials": detail.get("materials", {}).get("ascension", {}),
-                    "talent_materials": detail.get("materials", {}).get("talent", {}),
+                    "ascension_materials": self.material_steps(detail.get("materials", {}).get("ascensions")),
+                    "talent_materials": self.material_steps(detail.get("materials", {}).get("talents"), start_level=2),
                     "talents": detail.get("skills", []),
                     "passive_talents": detail.get("passives", []),
                     "constellations": detail.get("constellations", []),
@@ -122,6 +199,10 @@ class NSNormalizer:
             detail = payload.get("details", {}).get(item_id) or {}
             name = localized_name(detail) or localized_name(item) or item_id
             weapon_prop = detail.get("weapon_prop") or {}
+            refinement = detail.get("refinement") or {}
+            stats_modifier = detail.get("stats_modifier") or {}
+            if detail.get("ascension"):
+                stats_modifier = {**stats_modifier, "ascension": detail.get("ascension")}
 
             records.append(
                 {
@@ -132,11 +213,11 @@ class NSNormalizer:
                     "weapon_type": WEAPON_TYPES.get(detail.get("weapon_type") or item.get("type"), detail.get("weapon_type") or item.get("type")),
                     "base_attack": item.get("atk") or weapon_prop.get("base_atk"),
                     "sub_stat": item.get("sub") or weapon_prop.get("sub"),
-                    "passive_name": (detail.get("refinement") or {}).get("name"),
-                    "passive_description": (detail.get("refinement") or {}).get("desc"),
+                    "passive_name": refinement_name(refinement),
+                    "passive_description": refinement_description(refinement),
                     "description": detail.get("desc") or item.get("desc"),
                     "ascension_materials": detail.get("materials", {}),
-                    "stats_modifier": detail.get("stats_modifier") or {},
+                    "stats_modifier": stats_modifier,
                     "iconName": detail.get("icon") or item.get("icon"),
                     "icon_url": icon_asset_url(self.static_base_url, self.version, detail.get("icon") or item.get("icon")),
                     "story": detail.get("story") or [],
@@ -223,3 +304,19 @@ class NSNormalizer:
         if not region:
             return None
         return region.removeprefix("ASSOC_TYPE_").replace("_", " ").title()
+
+    def material_steps(self, steps: Any, start_level: int = 20) -> dict[str, Any]:
+        if not isinstance(steps, list):
+            return {}
+        if steps and isinstance(steps[0], list):
+            steps = steps[0]
+
+        if start_level == 20:
+            labels = ["level_20", "level_40", "level_50", "level_60", "level_70", "level_80"]
+        else:
+            labels = [f"level_{level}" for level in range(start_level, start_level + len(steps))]
+
+        return {
+            labels[index] if index < len(labels) else f"level_{start_level + index}": step
+            for index, step in enumerate(steps)
+        }

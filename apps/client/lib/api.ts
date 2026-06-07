@@ -39,9 +39,13 @@ export type CharacterDetails = Character & {
   base_def?: number | null;
   crit_rate?: number | null;
   crit_dmg?: number | null;
-  talents?: Array<{ name?: string; description?: string; unlock?: string }>;
-  passive_talents?: Array<{ name?: string; description?: string; unlock?: string }>;
-  constellations?: Array<{ name?: string; description?: string; level?: number }>;
+  stats_modifier?: Record<string, any>;
+  ascension_materials?: Record<string, any>;
+  talent_materials?: Record<string, any>;
+  talents?: Array<Record<string, any>>;
+  passive_talents?: Array<Record<string, any>>;
+  constellations?: Array<Record<string, any>>;
+  materials?: Array<Record<string, any>>;
 };
 
 export type WeaponDetails = Weapon & {
@@ -51,6 +55,10 @@ export type WeaponDetails = Weapon & {
   passive_description?: string | null;
   description?: string | null;
   location?: string | null;
+  ascension_materials?: Record<string, any>;
+  stats_modifier?: Record<string, any>;
+  story?: Record<string, any> | Array<any>;
+  materials?: Array<Record<string, any>>;
 };
 
 function buildUrl(path: string, query?: ResourceQuery) {

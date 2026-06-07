@@ -1,0 +1,5 @@
+ALTER TABLE "elements" ADD COLUMN IF NOT EXISTS "iconUrl" TEXT NOT NULL DEFAULT '';
+ALTER TABLE "weapon_types" ADD COLUMN IF NOT EXISTS "iconUrl" TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE "characters" DROP COLUMN IF EXISTS "elementIconUrl";
+ALTER TABLE "characters" DROP COLUMN IF EXISTS "weaponTypeIconUrl";

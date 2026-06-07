@@ -6,6 +6,7 @@ const { loadRootEnv } = require("./load-root-env");
 loadRootEnv();
 
 const prisma = new PrismaClient();
+let materialCatalog = new Map();
 
 function slugify(value) {
   return String(value || "")
@@ -43,26 +44,123 @@ function lookupId(value) {
   return id || null;
 }
 
-async function upsertElement(name) {
-  const id = lookupId(name);
-  if (!id) return null;
-  await prisma.element.upsert({
-    where: { id },
-    update: { name },
-    create: { id, name },
-  });
-  return id;
+const WEAPON_TYPES = {
+  WEAPON_SWORD_ONE_HAND: "Sword",
+  WEAPON_CLAYMORE: "Claymore",
+  WEAPON_POLE: "Polearm",
+  WEAPON_POLEARM: "Polearm",
+  WEAPON_CATALYST: "Catalyst",
+  WEAPON_BOW: "Bow",
+};
+
+const ELEMENT_ICON_URLS = {};
+
+const IMPORT_ENTITY_ORDER = [
+  "ascension_materials",
+  "characters",
+  "weapons",
+  "artifacts",
+  "enemies",
+  "dungeons",
+];
+
+const IMPORT_ENTITY_ALIASES = {
+  material: "ascension_materials",
+  materials: "ascension_materials",
+  item: "ascension_materials",
+  items: "ascension_materials",
+  character: "characters",
+  weapon: "weapons",
+  artifact: "artifacts",
+  enemy: "enemies",
+  dungeon: "dungeons",
+  domain: "dungeons",
+  domains: "dungeons",
+};
+
+function normalizeWeaponTypeName(name) {
+  return WEAPON_TYPES[name] || name;
 }
 
-async function upsertWeaponType(name) {
+function elementIconUrl(element, explicitUrl) {
+  if (explicitUrl && !String(explicitUrl).includes("genshin.jmp.blue")) {
+    return explicitUrl;
+  }
+  return ELEMENT_ICON_URLS[element] || "";
+}
+
+function normalizeIconUrl(iconName, iconUrl) {
+  let resultName = "";
+  let resultUrl = "";
+
+  if (!iconName || !iconUrl) {
+    return { iconName, iconUrl };
+  }
+
+  if (iconName.includes("_{0}")) resultName = iconName.replace("{0}", "Fire");
+  if (iconUrl.includes("_{0}")) resultUrl = iconUrl.replace("{0}", "Fire");
+
+  return {
+    iconName: resultName == "" ? iconName : resultName,
+    iconUrl: resultUrl == "" ? iconUrl : resultUrl,
+  };
+}
+
+async function upsertElement(name, iconUrl) {
   const id = lookupId(name);
   if (!id) return null;
-  await prisma.weaponType.upsert({
-    where: { id },
-    update: { name },
-    create: { id, name },
+  const existing = await prisma.element.findUnique({ where: { name } });
+
+  if (existing) {
+    const updated = await prisma.element.update({
+      where: { id: existing.id },
+      data: {
+        iconUrl: iconUrl || sanitizeRemovedSourceUrl(existing.iconUrl) || "",
+      },
+    });
+    return updated.id;
+  }
+
+  const created = await prisma.element.create({
+    data: {
+      id,
+      name,
+      iconUrl: iconUrl || "",
+    },
   });
-  return id;
+  return created.id;
+}
+
+function sanitizeRemovedSourceUrl(url) {
+  return url && !String(url).includes("genshin.jmp.blue") ? url : "";
+}
+
+async function upsertWeaponType(name, iconUrl) {
+  const normalizeName = normalizeWeaponTypeName(name);
+  const id = lookupId(normalizeName);
+  if (!id) return null;
+  const existing = await prisma.weaponType.findUnique({
+    where: { name: normalizeName },
+  });
+
+  if (existing) {
+    const updated = await prisma.weaponType.update({
+      where: { id: existing.id },
+      data: {
+        iconUrl: iconUrl || existing.iconUrl || "",
+      },
+    });
+    return updated.id;
+  }
+
+  const created = await prisma.weaponType.create({
+    data: {
+      id,
+      name: normalizeName,
+      iconUrl: iconUrl || "",
+    },
+  });
+  return created.id;
 }
 
 async function upsertNation(name) {
@@ -88,40 +186,67 @@ async function upsertMaterialGroup(name) {
 }
 
 async function ensureMaterial(materialLike) {
-  const materialId = cleanId(materialLike.id || slugify(materialLike.name));
-  const name = materialLike.name || materialId;
-  if (!materialId || !name) return null;
+  const inputId = cleanId(materialLike.id || slugify(materialLike.name));
+  const catalogMaterial = materialCatalog.get(inputId);
+  const materialId = cleanId(inputId || catalogMaterial?.id || slugify(catalogMaterial?.name));
+  if (!materialId) return null;
 
-  const groupId = await upsertMaterialGroup(materialLike.group || materialLike.family);
+  const existing = await prisma.material.findUnique({ where: { id: materialId } });
+  const incomingName = materialLike.name;
+  const catalogName = catalogMaterial?.name;
+  const existingName = existing?.name;
+  const name = displayMaterialName(incomingName, catalogName, existingName, materialId);
+  const groupId = await upsertMaterialGroup(
+    materialLike.group || materialLike.family || catalogMaterial?.group || catalogMaterial?.family || existing?.family,
+  );
+  const iconName =
+    materialLike.iconName || materialLike.icon_name || catalogMaterial?.iconName || catalogMaterial?.icon_name || existing?.iconName || null;
+  const iconUrl = materialLike.icon_url || materialLike.iconUrl || catalogMaterial?.icon_url || catalogMaterial?.iconUrl || existing?.iconUrl || null;
+  const source = materialLike.source ?? catalogMaterial?.source ?? existing?.source ?? [];
+  const availability = materialLike.availability ?? catalogMaterial?.availability ?? existing?.availability ?? [];
+
   await prisma.material.upsert({
     where: { id: materialId },
     update: {
       slug: materialLike.slug || slugify(name),
       name,
       groupId,
-      family: materialLike.family || null,
-      rarity: materialLike.rarity ?? null,
-      description: materialLike.description || null,
-      source: jsonValue(materialLike.source, []),
-      availability: jsonValue(materialLike.availability, []),
-      iconName: materialLike.iconName || null,
-      iconUrl: materialLike.icon_url || materialLike.iconUrl || null,
+      family: materialLike.family || catalogMaterial?.family || existing?.family || null,
+      rarity: materialLike.rarity ?? catalogMaterial?.rarity ?? existing?.rarity ?? null,
+      description: materialLike.description || catalogMaterial?.description || existing?.description || null,
+      source: jsonValue(source, []),
+      availability: jsonValue(availability, []),
+      iconName,
+      iconUrl,
     },
     create: {
       id: materialId,
       slug: materialLike.slug || slugify(name),
       name,
       groupId,
-      family: materialLike.family || null,
-      rarity: materialLike.rarity ?? null,
-      description: materialLike.description || null,
-      source: jsonValue(materialLike.source, []),
-      availability: jsonValue(materialLike.availability, []),
-      iconName: materialLike.iconName || null,
-      iconUrl: materialLike.icon_url || materialLike.iconUrl || null,
+      family: materialLike.family || catalogMaterial?.family || null,
+      rarity: materialLike.rarity ?? catalogMaterial?.rarity ?? null,
+      description: materialLike.description || catalogMaterial?.description || null,
+      source: jsonValue(source, []),
+      availability: jsonValue(availability, []),
+      iconName,
+      iconUrl,
     },
   });
   return materialId;
+}
+
+function isNumericName(value) {
+  return /^[0-9]+$/.test(String(value || "").trim());
+}
+
+function displayMaterialName(incomingName, catalogName, existingName, fallbackId) {
+  for (const name of [incomingName, catalogName, existingName]) {
+    if (name && !isNumericName(name)) {
+      return name;
+    }
+  }
+  return catalogName || existingName || incomingName || fallbackId;
 }
 
 async function importMetadata(metadata, outputPath) {
@@ -164,8 +289,14 @@ async function importMaterials(materials) {
 
 async function importCharacters(characters) {
   for (const character of characters) {
-    const elementId = await upsertElement(character.element);
-    const weaponTypeId = await upsertWeaponType(character.weapon_type);
+    const elementId = await upsertElement(
+      character.element,
+      elementIconUrl(character.element, character.element_icon_url || character.elementIconUrl),
+    );
+    const weaponTypeId = await upsertWeaponType(
+      character.weapon_type,
+      character.weapon_type_icon_url || character.weapon_type_url || character.weaponTypeIconUrl || null,
+    );
     const nationId = await upsertNation(character.nation);
 
     await prisma.character.upsert({
@@ -239,7 +370,11 @@ async function importCharacters(characters) {
 
 async function importWeapons(weapons) {
   for (const weapon of weapons) {
-    const weaponTypeId = await upsertWeaponType(weapon.weapon_type);
+    const weaponTypeId = await upsertWeaponType(
+      weapon.weapon_type,
+      weapon.weapon_type_icon_url || weapon.weapon_type_url || weapon.weaponTypeIconUrl || null,
+    );
+    const { iconName, iconUrl } = normalizeIconUrl(weapon.iconName, weapon.icon_url);
 
     await prisma.weapon.upsert({
       where: { id: cleanId(weapon.id) },
@@ -258,8 +393,8 @@ async function importWeapons(weapons) {
         ascensionMaterials: jsonValue(weapon.ascension_materials, {}),
         statsModifier: jsonValue(weapon.stats_modifier, {}),
         story: jsonValue(weapon.story, []),
-        iconName: weapon.iconName || null,
-        iconUrl: weapon.icon_url || weapon.iconUrl || null,
+        iconName: iconName,
+        iconUrl: iconUrl,
       },
       create: {
         id: cleanId(weapon.id),
@@ -277,8 +412,8 @@ async function importWeapons(weapons) {
         ascensionMaterials: jsonValue(weapon.ascension_materials, {}),
         statsModifier: jsonValue(weapon.stats_modifier, {}),
         story: jsonValue(weapon.story, []),
-        iconName: weapon.iconName || null,
-        iconUrl: weapon.icon_url || weapon.iconUrl || null,
+        iconName: iconName,
+        iconUrl: iconUrl,
       },
     });
 
@@ -519,6 +654,20 @@ function flattenMaterialCosts(value, source) {
           },
         });
       }
+
+      if (node.cost !== undefined && node.cost !== null) {
+        rows.push({
+          source,
+          level,
+          quantity: node.cost,
+          material: {
+            id: "202",
+            name: "Mora",
+            rarity: 3,
+            group: "Common Currency",
+          },
+        });
+      }
     }
 
     for (const [key, child] of Object.entries(node)) {
@@ -526,7 +675,7 @@ function flattenMaterialCosts(value, source) {
       const childLevel = level || key;
       if (Array.isArray(child)) {
         for (const mat of child) {
-          if (mat && typeof mat === "object" && mat.name) {
+          if (mat && typeof mat === "object" && (mat.name || mat.id)) {
             rows.push({
               source,
               level: childLevel,
@@ -551,40 +700,143 @@ function flattenMaterialCosts(value, source) {
 }
 
 async function main() {
-  const datasetPath = process.argv[2] || process.env.CRAWL_DATASET_PATH;
+  const { datasetPath, entities } = parseImportArgs(process.argv.slice(2));
+  const selectedEntities = new Set(entities || parseEntityList(process.env.CRAWL_IMPORT_ENTITIES));
+
+  if (!selectedEntities.size) {
+    for (const entity of IMPORT_ENTITY_ORDER) {
+      selectedEntities.add(entity);
+    }
+  }
+
   if (!datasetPath) {
     throw new Error("Pass a dataset path as argv[2] or set CRAWL_DATASET_PATH.");
   }
 
   const { dataset, sourcePath } = loadDataset(datasetPath);
   console.log(`Importing crawl dataset: ${sourcePath}`);
+  console.log(`Selected entities: ${[...selectedEntities].join(", ")}`);
   const data = dataset.data || {};
+  materialCatalog = new Map(
+    asArray(data.ascension_materials)
+      .filter((material) => material?.id)
+      .map((material) => [cleanId(material.id), material]),
+  );
 
   await importMetadata(dataset.metadata || {}, sourcePath);
-  await importMaterials(asArray(data.ascension_materials));
-  await importCharacters(asArray(data.characters));
-  await importWeapons(asArray(data.weapons));
-  await importArtifacts(asArray(data.artifacts));
-  await importEnemies(asArray(data.enemies));
-  await importDungeons(asArray(data.dungeons));
+
+  if (selectedEntities.has("ascension_materials")) {
+    await importMaterials(asArray(data.ascension_materials));
+  }
+  if (selectedEntities.has("characters")) {
+    await importCharacters(asArray(data.characters));
+  }
+  if (selectedEntities.has("weapons")) {
+    await importWeapons(asArray(data.weapons));
+  }
+  if (selectedEntities.has("artifacts")) {
+    await importArtifacts(asArray(data.artifacts));
+  }
+  if (selectedEntities.has("enemies")) {
+    await importEnemies(asArray(data.enemies));
+  }
+  if (selectedEntities.has("dungeons")) {
+    await importDungeons(asArray(data.dungeons));
+  }
 
   console.log(
     JSON.stringify(
       {
-        imported: {
-          characters: asArray(data.characters).length,
-          weapons: asArray(data.weapons).length,
-          artifacts: asArray(data.artifacts).length,
-          materials: asArray(data.ascension_materials).length,
-          enemies: asArray(data.enemies).length,
-          dungeons: asArray(data.dungeons).length,
-        },
+        imported: importCounts(data, selectedEntities),
+        selected_entities: [...selectedEntities],
         dataset: sourcePath,
       },
       null,
       2,
     ),
   );
+}
+
+function parseImportArgs(argv) {
+  let datasetPath = process.env.CRAWL_DATASET_PATH;
+  let entities = null;
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+
+    if (arg === "--entities" || arg === "--entity") {
+      entities = parseEntityList(argv[index + 1]);
+      index += 1;
+      continue;
+    }
+
+    if (arg.startsWith("--entities=") || arg.startsWith("--entity=")) {
+      entities = parseEntityList(arg.split("=").slice(1).join("="));
+      continue;
+    }
+
+    if (arg === "--help" || arg === "-h") {
+      printImportHelp();
+      process.exit(0);
+    }
+
+    if (!arg.startsWith("-") && !datasetPath) {
+      datasetPath = arg;
+      continue;
+    }
+
+    if (!arg.startsWith("-") && datasetPath === process.env.CRAWL_DATASET_PATH) {
+      datasetPath = arg;
+      continue;
+    }
+
+    throw new Error(`Unknown import argument: ${arg}`);
+  }
+
+  return { datasetPath, entities };
+}
+
+function parseEntityList(value) {
+  if (!value) return null;
+
+  const selected = new Set();
+  for (const rawName of String(value).split(",")) {
+    const name = rawName.trim().toLowerCase();
+    if (!name) continue;
+
+    const entity = IMPORT_ENTITY_ALIASES[name] || name;
+    if (!IMPORT_ENTITY_ORDER.includes(entity)) {
+      throw new Error(
+        `Unknown entity "${rawName}". Use one of: ${IMPORT_ENTITY_ORDER.join(", ")}.`,
+      );
+    }
+    selected.add(entity);
+  }
+
+  return [...selected];
+}
+
+function importCounts(data, selectedEntities) {
+  return Object.fromEntries(
+    IMPORT_ENTITY_ORDER
+      .filter((entity) => selectedEntities.has(entity))
+      .map((entity) => [entity, asArray(data[entity]).length]),
+  );
+}
+
+function printImportHelp() {
+  console.log(`Usage: node apps/api/scripts/import-crawl-dataset.js [datasetPath] [--entities characters,weapons]
+
+Entities:
+  ${IMPORT_ENTITY_ORDER.join(", ")}
+
+Aliases:
+  materials/items -> ascension_materials
+  domains/domain  -> dungeons
+
+Examples:
+  npm run crawl:import -- /data/gi-data --entities characters
+  CRAWL_IMPORT_ENTITIES=characters,weapons npm run crawl:import -- /data/gi-data`);
 }
 
 function loadDataset(inputPath) {

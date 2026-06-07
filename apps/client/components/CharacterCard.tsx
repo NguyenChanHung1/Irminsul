@@ -18,6 +18,15 @@ export default function CharacterCard({
     <div className={`character-card ${compact ? "compact" : ""}`}>
       {character.image_url && (
         <div className="character-image">
+          {character.element_icon_url && (
+            <Image
+              src={character.element_icon_url}
+              alt={`${character.element} vision`}
+              width={30}
+              height={30}
+              className="vision-corner-icon"
+            />
+          )}
           <Image
             src={character.image_url}
             alt={character.name}
@@ -37,8 +46,20 @@ export default function CharacterCard({
             {character.element}
           </span>
         </div>
-        <p className="weapon-type">{character.weapon_type}</p>
-        <p className="region">{character.region}</p>
+        <p className="weapon-type">
+          {character.weapon_type_icon_url && (
+            <Image
+              src={character.weapon_type_icon_url}
+              alt=""
+              width={16}
+              height={16}
+              className="meta-icon"
+            />
+          )}
+          {character.weapon_type}
+        </p>
+        {character.title && <p className="character-title">{character.title}</p>}
+        <p className="region">{character.affiliation || character.region}</p>
       </div>
     </div>
   );

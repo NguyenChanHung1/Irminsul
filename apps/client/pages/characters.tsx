@@ -118,18 +118,22 @@ export default function CharactersPage() {
         <title>Characters | Irminsul</title>
       </Head>
 
-      <div className="page-container">
-        <div className="page-header">
-          <h1>⚔️ Characters</h1>
-          <p>Browse all characters in Teyvat</p>
+      <div className="page-container resource-browser">
+        <div className="page-header resource-page-header">
+          <div>
+            <h1>Characters</h1>
+            <p>{meta ? `${meta.total} characters` : "Browse all characters in Teyvat"}</p>
+          </div>
         </div>
 
-        <SearchInput
-          placeholder="Search by name, element, weapon..."
-          onSearch={handleSearch}
-        />
+        <div className="resource-controls">
+          <SearchInput
+            placeholder="Search characters..."
+            onSearch={handleSearch}
+          />
 
-        <FilterBar fields={characterFilters} onFilterChange={handleFilterChange} />
+          <FilterBar fields={characterFilters} onFilterChange={handleFilterChange} />
+        </div>
 
         <div className="characters-grid">
           {isLoading ? (

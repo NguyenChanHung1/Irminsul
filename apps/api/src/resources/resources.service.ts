@@ -27,6 +27,24 @@ type PageResult<T> = {
 const DEFAULT_LIMIT = 48;
 const MAX_LIMIT = 100;
 const DIGITS = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9'];
+const NS_ASSET_PROXY_PATH = '/ns-assets/';
+const WEAPON_TYPE_ICON_URLS: Record<string, string> = {
+  Sword: nsAssetUrl('WEAPON_SWORD_ONE_HAND.webp'),
+  Claymore: nsAssetUrl('WEAPON_CLAYMORE.webp'),
+  Polearm: nsAssetUrl('WEAPON_POLE.webp'),
+  Bow: nsAssetUrl('WEAPON_BOW.webp'),
+  Catalyst: nsAssetUrl('WEAPON_CATALYST.webp'),
+};
+const ELEMENT_ICON_URLS: Record<string, string> = {
+};
+
+function nsAssetUrl(tail: string) {
+  return `${NS_ASSET_PROXY_PATH}${tail.replace(/^\/+/, '')}`;
+}
+
+function nsAssetBaseUrl() {
+  return process.env.NS_ASSET_BASE_URL?.replace(/\/?$/, '/') || '';
+}
 
 @Injectable()
 export class ResourcesService {
@@ -50,7 +68,7 @@ export class ResourcesService {
         where,
         skip,
         take,
-        orderBy: [{ rarity: 'desc' }, { name: 'asc' }],
+        orderBy: [{ releaseDate: { sort: 'desc', nulls: 'last' } }, { name: 'asc' }],
         include: {
           element: true,
           weaponType: true,
@@ -69,7 +87,12 @@ export class ResourcesService {
         element: character.element?.name ?? 'Unknown',
         weapon_type: character.weaponType?.name ?? 'Unknown',
         region: character.nation?.name ?? character.affiliation ?? 'Unknown',
-        image_url: character.iconUrl ?? undefined,
+        affiliation: character.affiliation,
+        title: character.title,
+        release_date: character.releaseDate,
+        image_url: this.publicImageUrl(character.iconUrl),
+        element_icon_url: this.publicImageUrl(character.element?.iconUrl) || this.elementIconUrl(character.element?.name),
+        weapon_type_icon_url: this.publicImageUrl(character.weaponType?.iconUrl) || this.weaponTypeIconUrl(character.weaponType?.name),
       })),
       total,
       page,
@@ -103,7 +126,10 @@ export class ResourcesService {
       element: character.element?.name ?? 'Unknown',
       weapon_type: character.weaponType?.name ?? 'Unknown',
       region: character.nation?.name ?? character.affiliation ?? 'Unknown',
-      image_url: character.iconUrl ?? undefined,
+      affiliation: character.affiliation,
+      image_url: this.publicImageUrl(character.iconUrl),
+      element_icon_url: this.publicImageUrl(character.element?.iconUrl) || this.elementIconUrl(character.element?.name),
+      weapon_type_icon_url: this.publicImageUrl(character.weaponType?.iconUrl) || this.weaponTypeIconUrl(character.weaponType?.name),
       title: character.title,
       description: character.description,
       release_date: character.releaseDate,
@@ -159,8 +185,9 @@ export class ResourcesService {
         name: weapon.name,
         rarity: weapon.rarity ?? 0,
         weapon_type: weapon.weaponType?.name ?? 'Unknown',
+        weapon_type_icon_url: this.publicImageUrl(weapon.weaponType?.iconUrl) || this.weaponTypeIconUrl(weapon.weaponType?.name),
         main_stat: weapon.subStat ?? '',
-        image_url: weapon.iconUrl ?? undefined,
+        image_url: this.publicImageUrl(weapon.iconUrl),
       })),
       total,
       page,
@@ -190,6 +217,7 @@ export class ResourcesService {
       name: weapon.name,
       rarity: weapon.rarity ?? 0,
       weapon_type: weapon.weaponType?.name ?? 'Unknown',
+      weapon_type_icon_url: this.publicImageUrl(weapon.weaponType?.iconUrl) || this.weaponTypeIconUrl(weapon.weaponType?.name),
       base_attack: weapon.baseAttack,
       main_stat: weapon.subStat ?? '',
       passive_name: weapon.passiveName,
@@ -200,7 +228,7 @@ export class ResourcesService {
       ascension_materials: weapon.ascensionMaterials,
       stats_modifier: weapon.statsModifier,
       story: weapon.story,
-      image_url: weapon.iconUrl ?? undefined,
+      image_url: this.publicImageUrl(weapon.iconUrl),
       materials: weapon.materialUsages.map((usage) => ({
         source: usage.source,
         quantity: usage.quantity,
@@ -234,7 +262,7 @@ export class ResourcesService {
         rarity: artifact.maxRarity ?? 0,
         set_name: artifact.name,
         main_stat: artifact.twoPieceBonus ?? '',
-        image_url: artifact.iconUrl ?? undefined,
+        image_url: this.publicImageUrl(artifact.iconUrl),
       })),
       total,
       page,
@@ -328,7 +356,7 @@ export class ResourcesService {
         enemy_type: enemy.enemyType,
         family: enemy.family,
         description: enemy.description,
-        image_url: enemy.iconUrl ?? undefined,
+        image_url: this.publicImageUrl(enemy.iconUrl),
       })),
       total,
       page,
@@ -415,6 +443,31 @@ export class ResourcesService {
     return /^manekin(a)?$/i.test(name) ? 4 : rarity ?? 0;
   }
 
+  private weaponTypeIconUrl(weaponType: string | undefined) {
+    return weaponType ? WEAPON_TYPE_ICON_URLS[weaponType] : undefined;
+  }
+
+  private elementIconUrl(element: string | undefined) {
+    return element ? ELEMENT_ICON_URLS[element] : undefined;
+  }
+
+  private publicImageUrl(url: string | null | undefined) {
+    if (!url || url.includes('genshin.jmp.blue')) {
+      return undefined;
+    }
+
+    if (url.startsWith(NS_ASSET_PROXY_PATH)) {
+      return url;
+    }
+
+    const baseUrl = nsAssetBaseUrl();
+    if (baseUrl && url.startsWith(baseUrl)) {
+      return nsAssetUrl(url.slice(baseUrl.length));
+    }
+
+    return url;
+  }
+
   private rarityFilter(rarity: string | undefined) {
     const parsed = Number.parseInt(rarity ?? '', 10);
     return Number.isFinite(parsed) ? { rarity: parsed } : {};
@@ -439,7 +492,7 @@ export class ResourcesService {
       name: material.name,
       rarity: material.rarity ?? undefined,
       type: material.family ?? 'Material',
-      image_url: material.iconUrl ?? undefined,
+      image_url: this.publicImageUrl(material.iconUrl),
     };
   }
 }

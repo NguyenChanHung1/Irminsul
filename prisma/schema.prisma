@@ -288,6 +288,7 @@ model DungeonReward {
 model Element {
   id         String      @id
   name       String      @unique
+  iconUrl    String      
   characters Character[]
 
   @@map("elements")
@@ -296,6 +297,7 @@ model Element {
 model WeaponType {
   id         String      @id
   name       String      @unique
+  iconUrl    String 
   characters Character[]
   weapons    Weapon[]
 

@@ -3,9 +3,10 @@ import { useEffect, useState } from "react";
 import Head from "next/head";
 import SearchInput from "../components/SearchInput";
 import FilterBar from "../components/FilterBar";
-import ItemCard from "../components/ItemCard";
+import Image from "next/image";
 import { Weapon, FilterOptions } from "../types";
 import { PageMeta, api } from "../lib/api";
+import { weaponTypeIconUrl } from "../lib/game-display";
 
 const PAGE_LIMIT = 40;
 const weaponFilters = [
@@ -108,18 +109,22 @@ export default function WeaponsPage() {
         <title>Weapons | Irminsul</title>
       </Head>
 
-      <div className="page-container">
-        <div className="page-header">
-          <h1>⚔️ Weapons</h1>
-          <p>Discover all weapons in Teyvat</p>
+      <div className="page-container resource-browser">
+        <div className="page-header resource-page-header">
+          <div>
+            <h1>Weapons</h1>
+            <p>{meta ? `${meta.total} weapons` : "Discover all weapons in Teyvat"}</p>
+          </div>
         </div>
 
-        <SearchInput
-          placeholder="Search by name, type..."
-          onSearch={handleSearch}
-        />
+        <div className="resource-controls">
+          <SearchInput
+            placeholder="Search weapons..."
+            onSearch={handleSearch}
+          />
 
-        <FilterBar fields={weaponFilters} onFilterChange={handleFilterChange} />
+          <FilterBar fields={weaponFilters} onFilterChange={handleFilterChange} />
+        </div>
 
         <div className="items-grid">
           {isLoading ? (
@@ -131,16 +136,29 @@ export default function WeaponsPage() {
             </div>
           ) : weapons.length > 0 ? (
             weapons.map((weapon) => (
-              <ItemCard
-                key={weapon.id}
-                id={weapon.id}
-                name={weapon.name}
-                rarity={weapon.rarity}
-                type={weapon.weapon_type}
-                mainStat={weapon.main_stat}
-                image_url={weapon.image_url}
-                href={`/weapons/${weapon.id}`}
-              />
+              <a className="item-card weapon-card" key={weapon.id} href={`/weapons/${weapon.id}`}>
+                {weapon.image_url && (
+                  <div className="item-image weapon-card-image">
+                    <Image src={weapon.image_url} alt={weapon.name} width={160} height={160} priority />
+                  </div>
+                )}
+                <div className="item-info weapon-card-info">
+                  <h4>{weapon.name}</h4>
+                  <div className="weapon-card-meta">
+                    <span className={`rarity star-${weapon.rarity}`}>{"⭐".repeat(weapon.rarity)}</span>
+                    {weaponTypeIconUrl(weapon.weapon_type, weapon.weapon_type_icon_url) && (
+                      <span className="weapon-type-icon-chip" title={weapon.weapon_type}>
+                        <Image
+                          src={weaponTypeIconUrl(weapon.weapon_type, weapon.weapon_type_icon_url)!}
+                          alt={weapon.weapon_type}
+                          width={22}
+                          height={22}
+                        />
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </a>
             ))
           ) : (
             <div className="empty-state">

@@ -7,7 +7,12 @@ export interface Character {
   element: string;
   weapon_type: string;
   region: string;
+  affiliation?: string | null;
+  title?: string | null;
+  release_date?: string | null;
   image_url?: string;
+  element_icon_url?: string;
+  weapon_type_icon_url?: string;
 }
 
 export interface Weapon {
@@ -18,6 +23,7 @@ export interface Weapon {
   weapon_type: string;
   main_stat: string;
   image_url?: string;
+  weapon_type_icon_url?: string;
 }
 
 export interface Artifact {
