@@ -30,6 +30,11 @@ export class ResourcesController {
     return this.resourcesService.listArtifacts(query);
   }
 
+  @Get('artifacts/:id')
+  getArtifact(@Param('id') id: string) {
+    return this.resourcesService.getArtifact(id);
+  }
+
   @Get('materials')
   listMaterials(@Query() query: Record<string, string | undefined>) {
     return this.resourcesService.listMaterials(query);

@@ -86,6 +86,8 @@ function elementIconUrl(element, explicitUrl) {
   if (explicitUrl && !String(explicitUrl).includes("genshin.jmp.blue")) {
     return explicitUrl;
   }
+  ELEMENT_ICON_URLS[element] = explicitUrl;
+
   return ELEMENT_ICON_URLS[element] || "";
 }
 
@@ -293,6 +295,7 @@ async function importCharacters(characters) {
       character.element,
       elementIconUrl(character.element, character.element_icon_url || character.elementIconUrl),
     );
+    
     const weaponTypeId = await upsertWeaponType(
       character.weapon_type,
       character.weapon_type_icon_url || character.weapon_type_url || character.weaponTypeIconUrl || null,
@@ -851,7 +854,7 @@ function loadDataset(inputPath) {
   const stat = fs.statSync(absolutePath);
   if (stat.isFile()) {
     return {
-      dataset: JSON.parse(fs.readFileSync(absolutePath, "utf8")),
+      dataset: readJsonFile(absolutePath),
       sourcePath: absolutePath,
     };
   }
@@ -877,7 +880,7 @@ function loadDataset(inputPath) {
 
   candidates.sort((left, right) => fs.statSync(right).mtimeMs - fs.statSync(left).mtimeMs);
   return {
-    dataset: JSON.parse(fs.readFileSync(candidates[0], "utf8")),
+    dataset: readJsonFile(candidates[0]),
     sourcePath: candidates[0],
   };
 }
@@ -901,7 +904,7 @@ function loadDirectoryDataset(directoryPath) {
   }
 
   return {
-    metadata: JSON.parse(fs.readFileSync(metadataPath, "utf8")),
+    metadata: readJsonFile(metadataPath),
     data,
   };
 }
@@ -910,10 +913,30 @@ function readEntityRaw(directoryPath, entityName) {
   const rawPath = path.join(directoryPath, entityName, "raw.json");
   if (!fs.existsSync(rawPath)) return [];
 
-  const payload = JSON.parse(fs.readFileSync(rawPath, "utf8"));
+  const payload = readJsonFile(rawPath);
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload.data)) return payload.data;
   return [];
+}
+
+function readJsonFile(filePath) {
+  const text = fs.readFileSync(filePath, "utf8");
+
+  try {
+    return JSON.parse(text);
+  } catch (error) {
+    const withoutTrailingCommas = text.replace(/,\s*([}\]])/g, "$1");
+    if (withoutTrailingCommas !== text) {
+      try {
+        console.warn(`Recovered JSON with trailing commas: ${filePath}`);
+        return JSON.parse(withoutTrailingCommas);
+      } catch {
+        // Fall through to the path-aware error below.
+      }
+    }
+
+    throw new Error(`Invalid JSON in ${filePath}: ${error.message}`);
+  }
 }
 
 function findDatasetFiles(directoryPath) {

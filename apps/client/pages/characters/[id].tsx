@@ -27,6 +27,29 @@ function targetAscensionKey(level: number) {
   return "level_80";
 }
 
+function ascensionMaterialsForLevel(character: CharacterDetails, level: number) {
+  const targetLevel = Number(targetAscensionKey(level).replace("level_", ""));
+  const totalRows = groupedMaterials(
+    (character.materials || []).filter((row: any) => {
+      const rowLevel = Number(String(row?.level || "").replace("level_", ""));
+      return row?.source === "ascension" && rowLevel <= targetLevel;
+    }),
+    undefined,
+    "ascension",
+  );
+  if (totalRows.length) {
+    return totalRows;
+  }
+
+  const rawRows = [];
+  for (const ascensionLevel of [20, 40, 50, 60, 70, 80]) {
+    if (ascensionLevel <= targetLevel) {
+      rawRows.push(...materialRows(character.ascension_materials?.[`level_${ascensionLevel}`]));
+    }
+  }
+  return totalMaterialRows(rawRows as any);
+}
+
 function talentMaterialsForLevel(character: CharacterDetails, level: number) {
   const totalRows = groupedMaterials(
     (character.materials || []).filter((row: any) => {
@@ -128,10 +151,7 @@ export default function CharacterDetailPage() {
     );
   }
 
-  const ascensionRows =
-    groupedMaterials(character.materials, targetAscensionKey(characterLevel), "ascension").length > 0
-      ? groupedMaterials(character.materials, targetAscensionKey(characterLevel), "ascension")
-      : materialRows(character.ascension_materials?.[targetAscensionKey(characterLevel)]);
+  const ascensionRows = ascensionMaterialsForLevel(character, characterLevel);
 
   return (
     <>

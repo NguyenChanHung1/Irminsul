@@ -16,6 +16,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "api.genshin.dev",
       },
+      {
+        protocol: "https",
+        hostname: "genshin.jmp.blue",
+      },
     ],
   },
   async rewrites() {

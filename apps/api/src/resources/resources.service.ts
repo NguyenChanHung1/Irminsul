@@ -91,8 +91,8 @@ export class ResourcesService {
         title: character.title,
         release_date: character.releaseDate,
         image_url: this.publicImageUrl(character.iconUrl),
-        element_icon_url: this.publicImageUrl(character.element?.iconUrl) || this.elementIconUrl(character.element?.name),
-        weapon_type_icon_url: this.publicImageUrl(character.weaponType?.iconUrl) || this.weaponTypeIconUrl(character.weaponType?.name),
+        element_icon_url: this.publicLookupIconUrl(character.element?.iconUrl) || this.elementIconUrl(character.element?.name),
+        weapon_type_icon_url: this.publicLookupIconUrl(character.weaponType?.iconUrl) || this.weaponTypeIconUrl(character.weaponType?.name),
       })),
       total,
       page,
@@ -128,8 +128,8 @@ export class ResourcesService {
       region: character.nation?.name ?? character.affiliation ?? 'Unknown',
       affiliation: character.affiliation,
       image_url: this.publicImageUrl(character.iconUrl),
-      element_icon_url: this.publicImageUrl(character.element?.iconUrl) || this.elementIconUrl(character.element?.name),
-      weapon_type_icon_url: this.publicImageUrl(character.weaponType?.iconUrl) || this.weaponTypeIconUrl(character.weaponType?.name),
+      element_icon_url: this.publicLookupIconUrl(character.element?.iconUrl) || this.elementIconUrl(character.element?.name),
+      weapon_type_icon_url: this.publicLookupIconUrl(character.weaponType?.iconUrl) || this.weaponTypeIconUrl(character.weaponType?.name),
       title: character.title,
       description: character.description,
       release_date: character.releaseDate,
@@ -185,7 +185,7 @@ export class ResourcesService {
         name: weapon.name,
         rarity: weapon.rarity ?? 0,
         weapon_type: weapon.weaponType?.name ?? 'Unknown',
-        weapon_type_icon_url: this.publicImageUrl(weapon.weaponType?.iconUrl) || this.weaponTypeIconUrl(weapon.weaponType?.name),
+        weapon_type_icon_url: this.publicLookupIconUrl(weapon.weaponType?.iconUrl) || this.weaponTypeIconUrl(weapon.weaponType?.name),
         main_stat: weapon.subStat ?? '',
         image_url: this.publicImageUrl(weapon.iconUrl),
       })),
@@ -217,7 +217,7 @@ export class ResourcesService {
       name: weapon.name,
       rarity: weapon.rarity ?? 0,
       weapon_type: weapon.weaponType?.name ?? 'Unknown',
-      weapon_type_icon_url: this.publicImageUrl(weapon.weaponType?.iconUrl) || this.weaponTypeIconUrl(weapon.weaponType?.name),
+      weapon_type_icon_url: this.publicLookupIconUrl(weapon.weaponType?.iconUrl) || this.weaponTypeIconUrl(weapon.weaponType?.name),
       base_attack: weapon.baseAttack,
       main_stat: weapon.subStat ?? '',
       passive_name: weapon.passiveName,
@@ -268,6 +268,31 @@ export class ResourcesService {
       page,
       limit,
     );
+  }
+
+  async getArtifact(id: string) {
+    const artifact = await this.prisma.artifactSet.findFirst({
+      where: { OR: [{ id }, { slug: id }] },
+    });
+
+    if (!artifact) {
+      throw new NotFoundException(`Artifact set "${id}" was not found.`);
+    }
+
+    return {
+      id: artifact.id,
+      slug: artifact.slug,
+      name: artifact.name,
+      rarity: artifact.maxRarity ?? 0,
+      set_name: artifact.name,
+      main_stat: artifact.twoPieceBonus ?? '',
+      image_url: this.publicImageUrl(artifact.iconUrl),
+      two_piece_bonus: artifact.twoPieceBonus,
+      four_piece_bonus: artifact.fourPieceBonus,
+      set_bonuses: artifact.setBonuses,
+      parts: this.artifactParts(artifact.parts),
+      icon_name: artifact.iconName,
+    };
   }
 
   async listMaterials(query: ListQuery) {
@@ -466,6 +491,55 @@ export class ResourcesService {
     }
 
     return url;
+  }
+
+  private publicLookupIconUrl(url: string | null | undefined) {
+    if (!url) {
+      return undefined;
+    }
+
+    if (url.startsWith(NS_ASSET_PROXY_PATH)) {
+      return url;
+    }
+
+    const baseUrl = nsAssetBaseUrl();
+    if (baseUrl && url.startsWith(baseUrl)) {
+      return nsAssetUrl(url.slice(baseUrl.length));
+    }
+
+    return url;
+  }
+
+  private artifactParts(parts: Prisma.JsonValue) {
+    const slotLabels: Record<string, string> = {
+      equip_bracer: 'Flower of Life',
+      equip_necklace: 'Plume of Death',
+      equip_shoes: 'Sands of Eon',
+      equip_ring: 'Goblet of Eonothem',
+      equip_dress: 'Circlet of Logos',
+    };
+
+    const rawParts =
+      parts && typeof parts === 'object' && !Array.isArray(parts)
+        ? (parts as Record<string, Record<string, unknown>>)
+        : {};
+
+    return Object.entries(slotLabels)
+      .map(([slot, label]) => {
+        const part = rawParts[slot] ?? {};
+        const iconName = typeof part.icon === 'string' ? part.icon : undefined;
+
+        return {
+          slot,
+          label,
+          name: typeof part.name === 'string' ? part.name : label,
+          description: typeof part.desc === 'string' ? part.desc : '',
+          icon_name: iconName,
+          image_url: iconName ? nsAssetUrl(`${iconName}.webp`) : undefined,
+          story: part.story,
+        };
+      })
+      .filter((part) => part.name || part.description || part.image_url);
   }
 
   private rarityFilter(rarity: string | undefined) {

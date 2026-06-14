@@ -1558,6 +1558,103 @@ textarea:focus,
   opacity: 0.75;
 }
 
+.artifact-bonus-list,
+.artifact-parts-grid {
+  display: grid;
+  gap: 0.8rem;
+}
+
+.artifact-bonus-list {
+  margin-top: 0.25rem;
+}
+
+.artifact-parts-grid {
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.artifact-bonus-row,
+.artifact-part-card {
+  display: grid;
+  border: 1px solid rgba(212, 255, 239, 0.1);
+  border-radius: 8px;
+  background: rgba(4, 9, 11, 0.24);
+}
+
+.artifact-bonus-row {
+  grid-template-columns: minmax(112px, 0.22fr) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+  padding: 0.85rem 1rem;
+}
+
+.artifact-bonus-row p {
+  max-width: 72ch;
+  margin: 0;
+  color: var(--text-soft);
+  font-size: 0.9rem;
+  line-height: 1.62;
+}
+
+.artifact-bonus-label {
+  display: grid;
+  gap: 0.18rem;
+}
+
+.artifact-bonus-label span,
+.artifact-bonus-label strong {
+  line-height: 1.1;
+}
+
+.artifact-bonus-label span {
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.artifact-bonus-label strong {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.artifact-part-card {
+  grid-template-columns: 76px minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: start;
+  min-height: 148px;
+  padding: 0.9rem;
+}
+
+.artifact-part-card h3 {
+  margin: 0 0 0.4rem;
+  font-size: 1rem;
+  line-height: 1.25;
+}
+
+.artifact-part-card .readable-copy {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.artifact-part-image {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 8px;
+  background: linear-gradient(160deg, rgba(40, 75, 68, 0.8), rgba(10, 25, 31, 0.96));
+  border: 1px solid rgba(238, 247, 244, 0.1);
+}
+
+.artifact-part-image img {
+  width: 66px;
+  height: 66px;
+  object-fit: contain;
+}
+
 @media (max-width: 900px) {
   .main-layout {
     display: block;
@@ -1679,5 +1776,15 @@ textarea:focus,
 
   .resource-detail .detail-art-panel {
     min-height: 260px;
+  }
+
+  .artifact-bonus-row,
+  .artifact-part-card {
+    grid-template-columns: 1fr;
+  }
+
+  .artifact-part-image {
+    width: 68px;
+    height: 68px;
   }
 }

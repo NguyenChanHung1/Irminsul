@@ -61,6 +61,25 @@ export type WeaponDetails = Weapon & {
   materials?: Array<Record<string, any>>;
 };
 
+export type ArtifactPart = {
+  slot: string;
+  label: string;
+  name: string;
+  description?: string | null;
+  icon_name?: string | null;
+  image_url?: string;
+  story?: Record<string, any>;
+};
+
+export type ArtifactDetails = Artifact & {
+  slug: string;
+  two_piece_bonus?: string | null;
+  four_piece_bonus?: string | null;
+  set_bonuses?: Record<string, any>;
+  parts?: ArtifactPart[];
+  icon_name?: string | null;
+};
+
 function buildUrl(path: string, query?: ResourceQuery) {
   const url = new URL(path, API_BASE_URL);
 
@@ -91,6 +110,7 @@ export const api = {
   weapon: (id: string) => request<WeaponDetails>(`/api/weapons/${id}`),
   artifacts: (query?: ResourceQuery) =>
     request<PageResponse<Artifact>>("/api/artifacts", query),
+  artifact: (id: string) => request<ArtifactDetails>(`/api/artifacts/${id}`),
   materials: (query?: ResourceQuery) => request<PageResponse<Item>>("/api/materials", query),
   enemies: (query?: ResourceQuery) => request<PageResponse<Enemy>>("/api/enemies", query),
 };
