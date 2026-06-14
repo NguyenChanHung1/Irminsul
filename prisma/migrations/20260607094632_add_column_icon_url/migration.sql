@@ -1,5 +1,7 @@
 -- AlterTable
+ALTER TABLE "elements" ADD COLUMN IF NOT EXISTS "iconUrl" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "elements" ALTER COLUMN "iconUrl" DROP DEFAULT;
 
 -- AlterTable
+ALTER TABLE "weapon_types" ADD COLUMN IF NOT EXISTS "iconUrl" TEXT NOT NULL DEFAULT '';
 ALTER TABLE "weapon_types" ALTER COLUMN "iconUrl" DROP DEFAULT;

@@ -1,6 +1,6 @@
 services:
-  db:
-    image: postgres:15
+  irminsul-db:
+    image: postgres:17
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${PG_USER:-nahida}
@@ -13,11 +13,11 @@ services:
     networks:
       - irminsul-network
 
-  pgadmin:
+  irminsul-pgadmin:
     image: dpage/pgadmin4:latest
     restart: unless-stopped
     depends_on:
-      - db
+      - irminsul-db
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
       PGADMIN_DEFAULT_PASSWORD: admin

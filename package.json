@@ -18,6 +18,7 @@
     "db:migrate:dev": "npm --prefix apps/api run prisma:migrate:dev --",
     "db:push": "npm --prefix apps/api run prisma:push",
     "db:validate": "npm --prefix apps/api run prisma:validate",
+    "setup": "npx prisma generate && npx prisma migrate deploy",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\""
   },
   "devDependencies": {
