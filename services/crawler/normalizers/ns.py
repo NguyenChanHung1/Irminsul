@@ -46,6 +46,19 @@ def parse_datetime(value: str | None) -> str | None:
         return value
 
 
+def format_birthday(value: Any) -> str | None:
+    if not isinstance(value, (list, tuple)) or len(value) != 2:
+        return None
+
+    month, day = value
+    if not isinstance(month, int) or not isinstance(day, int):
+        return None
+    if not 1 <= month <= 12 or not 1 <= day <= 31:
+        return None
+
+    return f"{month:02d}-{day:02d}"
+
+
 def icon_asset_url(static_base_url: str, version: str, icon_name: str | None) -> str | None:
     if not icon_name:
         return None
@@ -170,7 +183,7 @@ class NSNormalizer:
                     "title": info.get("title"),
                     "description": detail.get("desc") or item.get("desc") or info.get("detail"),
                     "release_date": parse_datetime(info.get("release_date") or item.get("release")),
-                    "birthday": f"{birth[0]:02d}-{birth[1]:02d}" if len(birth) == 2 else None,
+                    "birthday": format_birthday(birth),
                     "constellation": info.get("constellation"),
                     "iconName": detail.get("icon") or item.get("icon"),
                     "icon_url": icon_asset_url(self.static_base_url, self.version, detail.get("icon") or item.get("icon")),
