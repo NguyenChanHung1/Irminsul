@@ -1,12 +1,38 @@
 const fs = require("fs");
 const path = require("path");
 const { PrismaClient } = require("@prisma/client");
+const genshinDb = require("genshin-db");
 const { loadRootEnv } = require("./load-root-env");
 
 loadRootEnv();
 
 const prisma = new PrismaClient();
 let materialCatalog = new Map();
+
+function loadReleaseCatalog(resourceQuery) {
+  const records = resourceQuery("names", {
+    matchCategories: true,
+    verboseCategories: true,
+    queryLanguages: ["English"],
+    resultLanguage: "English",
+  });
+  const byId = new Map();
+  const byName = new Map();
+
+  for (const record of Array.isArray(records) ? records : []) {
+    if (record.id !== undefined && record.id !== null) {
+      byId.set(String(record.id), record);
+    }
+    if (record.name) {
+      byName.set(slugify(record.name), record);
+    }
+  }
+
+  return { byId, byName };
+}
+
+const weaponReleaseCatalog = loadReleaseCatalog(genshinDb.weapons);
+const artifactReleaseCatalog = loadReleaseCatalog(genshinDb.artifacts);
 
 function slugify(value) {
   return String(value || "")
@@ -37,6 +63,21 @@ function asObject(value) {
 
 function cleanId(value) {
   return String(value || "").trim();
+}
+
+function releaseMetadata(catalog, item) {
+  const record = catalog.byId.get(cleanId(item.id)) || catalog.byName.get(slugify(item.name));
+  const version = typeof record?.version === "string" ? record.version.trim() : "";
+  const match = /^(\d+)\.(\d+)$/.exec(version);
+
+  if (!match) {
+    return { releaseVersion: null, releaseOrder: null };
+  }
+
+  return {
+    releaseVersion: version,
+    releaseOrder: Number(match[1]) * 1000 + Number(match[2]),
+  };
 }
 
 function lookupId(value) {
@@ -415,6 +456,7 @@ async function importWeapons(weapons) {
       weapon.weapon_type_icon_url || weapon.weapon_type_url || weapon.weaponTypeIconUrl || null,
     );
     const { iconName, iconUrl } = normalizeIconUrl(weapon.iconName, weapon.icon_url);
+    const { releaseVersion, releaseOrder } = releaseMetadata(weaponReleaseCatalog, weapon);
 
     await prisma.weapon.upsert({
       where: { id: cleanId(weapon.id) },
@@ -429,6 +471,8 @@ async function importWeapons(weapons) {
         passiveDescription: weapon.passive_description || null,
         description: weapon.description || null,
         location: weapon.location || null,
+        releaseVersion,
+        releaseOrder,
         ascensionMaterialGroup: weapon.ascension_material_group || null,
         ascensionMaterials: jsonValue(weapon.ascension_materials, {}),
         statsModifier: jsonValue(weapon.stats_modifier, {}),
@@ -448,6 +492,8 @@ async function importWeapons(weapons) {
         passiveDescription: weapon.passive_description || null,
         description: weapon.description || null,
         location: weapon.location || null,
+        releaseVersion,
+        releaseOrder,
         ascensionMaterialGroup: weapon.ascension_material_group || null,
         ascensionMaterials: jsonValue(weapon.ascension_materials, {}),
         statsModifier: jsonValue(weapon.stats_modifier, {}),
@@ -463,6 +509,7 @@ async function importWeapons(weapons) {
 
 async function importArtifacts(artifacts) {
   for (const artifact of artifacts) {
+    const { releaseVersion, releaseOrder } = releaseMetadata(artifactReleaseCatalog, artifact);
     await prisma.artifactSet.upsert({
       where: { id: cleanId(artifact.id) },
       update: {
@@ -472,6 +519,8 @@ async function importArtifacts(artifacts) {
         maxRarity: artifact.max_rarity ?? null,
         twoPieceBonus: artifact.two_piece_bonus || null,
         fourPieceBonus: artifact.four_piece_bonus || null,
+        releaseVersion,
+        releaseOrder,
         setBonuses: jsonValue(artifact.set_bonuses, {}),
         parts: jsonValue(artifact.parts, {}),
         iconName: artifact.iconName || null,
@@ -485,6 +534,8 @@ async function importArtifacts(artifacts) {
         maxRarity: artifact.max_rarity ?? null,
         twoPieceBonus: artifact.two_piece_bonus || null,
         fourPieceBonus: artifact.four_piece_bonus || null,
+        releaseVersion,
+        releaseOrder,
         setBonuses: jsonValue(artifact.set_bonuses, {}),
         parts: jsonValue(artifact.parts, {}),
         iconName: artifact.iconName || null,

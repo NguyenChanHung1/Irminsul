@@ -22,6 +22,7 @@ export interface Weapon {
   rarity: number;
   weapon_type: string;
   main_stat: string;
+  release_version?: string | null;
   image_url?: string;
   weapon_type_icon_url?: string;
 }
@@ -33,6 +34,7 @@ export interface Artifact {
   rarity: number;
   set_name: string;
   main_stat: string;
+  release_version?: string | null;
   image_url?: string;
 }
 

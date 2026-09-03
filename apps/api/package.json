@@ -17,6 +17,8 @@
     "@nestjs/core": "^11.1.24",
     "@nestjs/platform-express": "^11.1.24",
     "@prisma/client": "^5.0.0",
+    "fast-safe-stringify": "^2.1.1",
+    "genshin-db": "^5.2.13",
     "next": "14.2.35",
     "reflect-metadata": "^0.1.13"
   },

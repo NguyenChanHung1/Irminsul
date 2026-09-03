@@ -100,6 +100,8 @@ model Weapon {
   passiveDescription     String?
   description            String?
   location               String?
+  releaseVersion         String?
+  releaseOrder           Int?
   ascensionMaterialGroup String?
   ascensionMaterials     Json             @default("{}")
   statsModifier          Json             @default("{}")
@@ -115,6 +117,7 @@ model Weapon {
   @@index([slug])
   @@index([weaponTypeId])
   @@index([rarity])
+  @@index([releaseOrder])
   @@index([ascensionMaterialGroup])
   @@map("weapons")
 }
@@ -127,6 +130,8 @@ model ArtifactSet {
   maxRarity      Int?
   twoPieceBonus  String?
   fourPieceBonus String?
+  releaseVersion String?
+  releaseOrder   Int?
   setBonuses     Json     @default("{}")
   parts          Json     @default("{}")
   iconName       String?
@@ -137,6 +142,7 @@ model ArtifactSet {
   @@index([name])
   @@index([slug])
   @@index([maxRarity])
+  @@index([releaseOrder])
   @@map("artifact_sets")
 }
 
