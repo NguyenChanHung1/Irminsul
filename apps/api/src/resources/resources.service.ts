@@ -295,6 +295,57 @@ export class ResourcesService {
     };
   }
 
+  async listItems(query: ListQuery) {
+    const { page, limit, skip, take } = this.getPagination(query);
+    const where: Prisma.ItemWhereInput = {
+      AND: [
+        query.q
+          ? {
+              OR: [
+                this.searchByName(query.q),
+                { type: { contains: query.q, mode: 'insensitive' } },
+              ],
+            }
+          : {},
+        this.rarityFilter(query.rarity),
+        query.type ? { type: { equals: query.type, mode: 'insensitive' } } : {},
+      ],
+    };
+
+    const [rows, total] = await this.prisma.$transaction([
+      this.prisma.item.findMany({
+        where,
+        skip,
+        take,
+        orderBy: [{ rarity: 'desc' }, { type: 'asc' }, { name: 'asc' }],
+      }),
+      this.prisma.item.count({ where }),
+    ]);
+
+    return this.page(rows.map((item) => this.itemSummary(item)), total, page, limit);
+  }
+
+  async getItem(id: string) {
+    const item = await this.prisma.item.findFirst({
+      where: { OR: [{ id }, { slug: id }] },
+    });
+
+    if (!item) {
+      throw new NotFoundException(`Item "${id}" was not found.`);
+    }
+
+    const raw = this.asRecord(item.raw);
+
+    return {
+      ...this.itemSummary(item),
+      icon_name: item.iconName,
+      description: typeof raw.desc === 'string' ? raw.desc : null,
+      effect: typeof raw.effect === 'string' ? raw.effect : null,
+      source: Array.isArray(raw.source_list) ? raw.source_list : [],
+      raw,
+    };
+  }
+
   async listMaterials(query: ListQuery) {
     const { page, limit, skip, take } = this.getPagination(query);
     const where: Prisma.MaterialWhereInput = {
@@ -568,5 +619,27 @@ export class ResourcesService {
       type: material.family ?? 'Material',
       image_url: this.publicImageUrl(material.iconUrl),
     };
+  }
+
+  private itemSummary(item: {
+    id: string;
+    slug: string;
+    name: string;
+    type: string | null;
+    rarity: number | null;
+    iconUrl: string | null;
+  }) {
+    return {
+      id: item.id,
+      slug: item.slug,
+      name: item.name,
+      rarity: item.rarity ?? undefined,
+      type: item.type ?? 'Item',
+      image_url: this.publicImageUrl(item.iconUrl),
+    };
+  }
+
+  private asRecord(value: Prisma.JsonValue): Record<string, unknown> {
+    return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
   }
 }

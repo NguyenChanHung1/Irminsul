@@ -24,7 +24,7 @@ Useful entity mappings:
 - NS `character.json` + `en/character/{id}.json` -> characters
 - NS `weapon.json` + `en/weapon/{id}.json` -> weapons
 - NS `artifact.json` + `en/artifact/{id}.json` -> artifact sets
-- NS `en/item_all.json` -> materials/items
+- NS `en/item.json` -> item catalog/material references
 - NS `monster.json` + `en/monster/{id}.json` -> enemies
 - genshin.dev `domains/all?lang=en` -> dungeons/domains
 

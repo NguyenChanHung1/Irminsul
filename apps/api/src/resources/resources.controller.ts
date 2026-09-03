@@ -37,7 +37,17 @@ export class ResourcesController {
 
   @Get('materials')
   listMaterials(@Query() query: Record<string, string | undefined>) {
-    return this.resourcesService.listMaterials(query);
+    return this.resourcesService.listItems(query);
+  }
+
+  @Get('items')
+  listItems(@Query() query: Record<string, string | undefined>) {
+    return this.resourcesService.listItems(query);
+  }
+
+  @Get('items/:id')
+  getItem(@Param('id') id: string) {
+    return this.resourcesService.getItem(id);
   }
 
   @Get('enemies')

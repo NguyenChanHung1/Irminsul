@@ -1,9 +1,9 @@
 // Artifacts listing page
 import { useEffect, useState } from "react";
 import Head from "next/head";
+import Image from "next/image";
 import SearchInput from "../components/SearchInput";
 import FilterBar from "../components/FilterBar";
-import ItemCard from "../components/ItemCard";
 import { Artifact, FilterOptions } from "../types";
 import { PageMeta, api } from "../lib/api";
 
@@ -12,7 +12,7 @@ const artifactFilters = [
   {
     key: "rarity" as const,
     label: "Rarity",
-    options: [5, 4, 3, 2, 1].map((value) => ({ label: `${value} star`, value })),
+    options: [5, 4, 3].map((value) => ({ label: `${value} star`, value })),
   },
 ];
 
@@ -98,18 +98,22 @@ export default function ArtifactsPage() {
         <title>Artifacts | Irminsul</title>
       </Head>
 
-      <div className="page-container">
-        <div className="page-header">
-          <h1>✨ Artifacts</h1>
-          <p>Explore all artifact sets in Teyvat</p>
+      <div className="page-container resource-browser">
+        <div className="page-header resource-page-header">
+          <div>
+            <h1>Artifacts</h1>
+            <p>{meta ? `${meta.total} artifact sets` : "Explore all artifact sets in Teyvat"}</p>
+          </div>
         </div>
 
-        <SearchInput
-          placeholder="Search by name, set..."
-          onSearch={handleSearch}
-        />
+        <div className="resource-controls">
+          <SearchInput
+            placeholder="Search artifacts..."
+            onSearch={handleSearch}
+          />
 
-        <FilterBar fields={artifactFilters} onFilterChange={handleFilterChange} />
+          <FilterBar fields={artifactFilters} onFilterChange={handleFilterChange} />
+        </div>
 
         <div className="items-grid">
           {isLoading ? (
@@ -121,16 +125,25 @@ export default function ArtifactsPage() {
             </div>
           ) : artifacts.length > 0 ? (
             artifacts.map((artifact) => (
-              <ItemCard
+              <a
+                className="item-card artifact-card"
                 key={artifact.id}
-                id={artifact.id}
-                name={artifact.name}
-                rarity={artifact.rarity}
-                type={artifact.set_name}
-                mainStat={artifact.main_stat}
-                image_url={artifact.image_url}
                 href={`/artifacts/${artifact.id}`}
-              />
+              >
+                {artifact.image_url && (
+                  <div className="item-image artifact-card-image">
+                    <Image src={artifact.image_url} alt={artifact.name} width={160} height={160} priority />
+                  </div>
+                )}
+                <div className="item-info artifact-card-info">
+                  <h4>{artifact.name}</h4>
+                  <div className="artifact-card-meta">
+                    <span className={`rarity star-${artifact.rarity}`}>{"⭐".repeat(artifact.rarity)}</span>
+                    <span className="artifact-set-chip">Set</span>
+                  </div>
+                  {artifact.main_stat && <p className="artifact-card-bonus">{artifact.main_stat}</p>}
+                </div>
+              </a>
             ))
           ) : (
             <div className="empty-state">

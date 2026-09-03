@@ -61,7 +61,7 @@ class NSSource:
             elif entity_type == "artifacts":
                 responses.append(self._fetch_with_details(version, entity_type, "artifact.json", "artifact", limit))
             elif entity_type == "materials":
-                responses.append(self._fetch_simple(version, entity_type, f"{self.lang}/item_all.json", limit))
+                responses.append(self._fetch_simple(version, entity_type, f"{self.lang}/item.json", limit))
             elif entity_type == "enemies":
                 responses.append(self._fetch_with_details(version, entity_type, "monster.json", "monster", limit))
 

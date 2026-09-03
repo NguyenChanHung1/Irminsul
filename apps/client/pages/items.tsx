@@ -1,9 +1,9 @@
 // Items listing page
 import { useEffect, useState } from "react";
 import Head from "next/head";
+import Image from "next/image";
 import SearchInput from "../components/SearchInput";
 import FilterBar from "../components/FilterBar";
-import ItemCard from "../components/ItemCard";
 import { Item, FilterOptions } from "../types";
 import { PageMeta, api } from "../lib/api";
 
@@ -13,14 +13,24 @@ const itemFilters = [
     key: "type" as const,
     label: "Type",
     options: [
-      "Character EXP Materials",
-      "Weapon Enhancement Materials",
-      "Character Ascension Materials",
-      "Talent Level-Up Materials",
-      "Weapon Ascension Materials",
-      "Enemy Drops",
-      "Cooking Ingredients",
-      "Local Specialty",
+      "Food",
+      "Character and Weapon Enhancement Material",
+      "Gadget",
+      "Material",
+      "Character Level-Up Material",
+      "Weapon Ascension Material",
+      "Cooking Ingredient",
+      "Character Talent Material",
+      "Fish",
+      "Adventure Item",
+      "Character Ascension Material",
+      "Refinement Material",
+      "Local Specialty (Mondstadt)",
+      "Local Specialty (Liyue)",
+      "Local Specialty (Inazuma)",
+      "Local Specialty (Sumeru)",
+      "Local Specialty (Fontaine)",
+      "Local Specialty (Natlan)",
     ].map((value) => ({ label: value, value })),
   },
   {
@@ -46,7 +56,7 @@ export default function ItemsPage() {
     setError(null);
 
     api
-      .materials({
+      .items({
         q: searchQuery,
         rarity: filters.rarity,
         type: filters.type,
@@ -93,7 +103,7 @@ export default function ItemsPage() {
     setError(null);
 
     api
-      .materials({
+      .items({
         q: searchQuery,
         rarity: filters.rarity,
         type: filters.type,
@@ -114,18 +124,22 @@ export default function ItemsPage() {
         <title>Items | Irminsul</title>
       </Head>
 
-      <div className="page-container">
-        <div className="page-header">
-          <h1>📦 Items</h1>
-          <p>All materials and collectibles in Teyvat</p>
+      <div className="page-container resource-browser">
+        <div className="page-header resource-page-header">
+          <div>
+            <h1>Items</h1>
+            <p>{meta ? `${meta.total} items` : "All materials and collectibles in Teyvat"}</p>
+          </div>
         </div>
 
-        <SearchInput
-          placeholder="Search by name, type..."
-          onSearch={handleSearch}
-        />
+        <div className="resource-controls">
+          <SearchInput
+            placeholder="Search items..."
+            onSearch={handleSearch}
+          />
 
-        <FilterBar fields={itemFilters} onFilterChange={handleFilterChange} />
+          <FilterBar fields={itemFilters} onFilterChange={handleFilterChange} />
+        </div>
 
         <div className="items-grid">
           {isLoading ? (
@@ -137,13 +151,28 @@ export default function ItemsPage() {
             </div>
           ) : items.length > 0 ? (
             items.map((item) => (
-              <ItemCard
+              <a
+                className="item-card catalog-item-card"
                 key={item.id}
-                id={item.id}
-                name={item.name}
-                type={item.type}
-                image_url={item.image_url}
-              />
+                href={`/items/${item.id}`}
+              >
+                {item.image_url && (
+                  <div className="item-image catalog-item-image">
+                    <Image src={item.image_url} alt={item.name} width={160} height={160} priority />
+                  </div>
+                )}
+                <div className="item-info catalog-item-info">
+                  <h4>{item.name}</h4>
+                  <div className="catalog-item-meta">
+                    {item.rarity ? (
+                      <span className={`rarity star-${item.rarity}`}>{"⭐".repeat(item.rarity)}</span>
+                    ) : (
+                      <span className="item-rank-chip">Rank 0</span>
+                    )}
+                    <span className="item-type-chip">{item.type}</span>
+                  </div>
+                </div>
+              </a>
             ))
           ) : (
             <div className="empty-state">

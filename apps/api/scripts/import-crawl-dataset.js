@@ -238,6 +238,42 @@ async function ensureMaterial(materialLike) {
   return materialId;
 }
 
+async function upsertItem(itemLike) {
+  const itemId = cleanId(itemLike.id || slugify(itemLike.name));
+  if (!itemId) return null;
+
+  const name = displayMaterialName(itemLike.name, null, null, itemId);
+  const iconName = itemLike.iconName || itemLike.icon_name || itemLike.icon || null;
+  const iconUrl = itemLike.icon_url || itemLike.iconUrl || null;
+  const type = itemLike.type || itemLike.group || itemLike.material_type || itemLike.family || null;
+  const rarity = itemLike.rarity ?? itemLike.rank ?? null;
+
+  await prisma.item.upsert({
+    where: { id: itemId },
+    update: {
+      slug: itemLike.slug || slugify(name),
+      name,
+      type,
+      rarity,
+      iconName,
+      iconUrl,
+      raw: jsonValue(itemLike.raw || itemLike, {}),
+    },
+    create: {
+      id: itemId,
+      slug: itemLike.slug || slugify(name),
+      name,
+      type,
+      rarity,
+      iconName,
+      iconUrl,
+      raw: jsonValue(itemLike.raw || itemLike, {}),
+    },
+  });
+
+  return itemId;
+}
+
 function isNumericName(value) {
   return /^[0-9]+$/.test(String(value || "").trim());
 }
@@ -285,6 +321,7 @@ async function importMetadata(metadata, outputPath) {
 
 async function importMaterials(materials) {
   for (const material of materials) {
+    await upsertItem(material);
     await ensureMaterial(material);
   }
 }

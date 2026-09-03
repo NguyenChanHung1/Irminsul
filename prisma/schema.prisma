@@ -168,6 +168,25 @@ model Material {
   @@map("materials")
 }
 
+model Item {
+  id        String   @id
+  slug      String
+  name      String
+  type      String?
+  rarity    Int?
+  iconName  String?
+  iconUrl   String?
+  raw       Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([slug])
+  @@index([type])
+  @@index([rarity])
+  @@map("items")
+}
+
 model MaterialGroup {
   id          String     @id
   name        String

@@ -80,6 +80,15 @@ export type ArtifactDetails = Artifact & {
   icon_name?: string | null;
 };
 
+export type ItemDetails = Item & {
+  slug: string;
+  icon_name?: string | null;
+  description?: string | null;
+  effect?: string | null;
+  source?: string[];
+  raw?: Record<string, any>;
+};
+
 function buildUrl(path: string, query?: ResourceQuery) {
   const url = new URL(path, API_BASE_URL);
 
@@ -111,6 +120,8 @@ export const api = {
   artifacts: (query?: ResourceQuery) =>
     request<PageResponse<Artifact>>("/api/artifacts", query),
   artifact: (id: string) => request<ArtifactDetails>(`/api/artifacts/${id}`),
+  items: (query?: ResourceQuery) => request<PageResponse<Item>>("/api/items", query),
+  item: (id: string) => request<ItemDetails>(`/api/items/${id}`),
   materials: (query?: ResourceQuery) => request<PageResponse<Item>>("/api/materials", query),
   enemies: (query?: ResourceQuery) => request<PageResponse<Enemy>>("/api/enemies", query),
 };

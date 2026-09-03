@@ -256,7 +256,7 @@ class NSNormalizer:
         for item_id, item in payload.items():
             if not isinstance(item, dict):
                 continue
-            if item.get("item_type") not in {"ITEM_MATERIAL", "ITEM_VIRTUAL"}:
+            if item.get("item_type") and item.get("item_type") not in {"ITEM_MATERIAL", "ITEM_VIRTUAL"}:
                 continue
             name = localized_name(item)
             records.append(
@@ -264,6 +264,7 @@ class NSNormalizer:
                     "id": str(item_id),
                     "slug": slugify(name or item_id),
                     "name": name or item_id,
+                    "type": item.get("type"),
                     "group": item.get("type") or item.get("material_type"),
                     "family": item.get("material_type"),
                     "rarity": item.get("rank"),
@@ -272,6 +273,7 @@ class NSNormalizer:
                     "availability": [],
                     "iconName": item.get("icon"),
                     "icon_url": icon_asset_url(self.static_base_url, self.version, item.get("icon")),
+                    "raw": item,
                 }
             )
 
